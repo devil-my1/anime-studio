@@ -9,7 +9,7 @@ import com.sukuna.animestudio.domain.model.User
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -21,7 +21,11 @@ class ProfileViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
-    val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<ProfileUiState> = _uiState.stateIn(
+        scope = viewModelScope,
+        started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
+        initialValue = ProfileUiState()
+    )
 
     init {
         loadUserProfile()
@@ -42,9 +46,21 @@ class ProfileViewModel @Inject constructor(
                                 profilePictureUrl = currentUser.photoUrl?.toString() ?: "",
                                 bio = "Welcome to my profile!",
                                 favoriteAnime = listOf("Naruto", "One Piece", "Attack on Titan"),
-                                watchlist = listOf("Jujutsu Kaisen", "Demon Slayer", "My Hero Academia"),
-                                completedAnime = listOf("Death Note", "Fullmetal Alchemist", "Steins;Gate"),
-                                watchingAnime = listOf("One Punch Man", "Tokyo Ghoul", "Hunter x Hunter"),
+                                watchlist = listOf(
+                                    "Jujutsu Kaisen",
+                                    "Demon Slayer",
+                                    "My Hero Academia"
+                                ),
+                                completedAnime = listOf(
+                                    "Death Note",
+                                    "Fullmetal Alchemist",
+                                    "Steins;Gate"
+                                ),
+                                watchingAnime = listOf(
+                                    "One Punch Man",
+                                    "Tokyo Ghoul",
+                                    "Hunter x Hunter"
+                                ),
                                 droppedAnime = listOf("Bleach", "Fairy Tail", "Sword Art Online")
                             ),
                             isLoading = false
