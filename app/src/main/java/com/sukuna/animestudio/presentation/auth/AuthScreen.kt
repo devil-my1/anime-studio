@@ -5,14 +5,17 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -38,13 +41,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sukuna.animestudio.R
 import com.sukuna.animestudio.presentation.components.LoadingIndicator
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,6 +64,8 @@ fun AuthScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var isSignUp by remember { mutableStateOf(false) }
+    var passwordFocused by remember { mutableStateOf(false) }
+    var emailFocused by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.isAuthenticated) {
         if (uiState.isAuthenticated) {
@@ -75,6 +86,13 @@ fun AuthScreen(
             ),
         contentAlignment = Alignment.Center
     ) {
+        // Background image
+        Image(
+            painter = painterResource(id = R.drawable.auth_screen_bg),
+            contentDescription = "Authentication Background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop // Scales the image to fill the container while maintaining aspect ratio
+        )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -82,14 +100,7 @@ fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Animated title with gradient
-            Text(
-                text = if (isSignUp) "Create Account" else "Welcome Back",
-                style = MaterialTheme.typography.headlineLarge,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 32.dp),
-                color = MaterialTheme.colorScheme.primary
-            )
+
 
             // Auth Card
             Card(
@@ -107,20 +118,51 @@ fun AuthScreen(
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // Animated title with gradient
+                    Text(
+                        text = if (isSignUp) "Create Account" else "Welcome Back",
+                        style = MaterialTheme.typography.headlineLarge,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 12.dp),
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+
                     // Email field
                     OutlinedTextField(
                         value = uiState.email,
                         onValueChange = viewModel::onEmailChange,
-                        label = { Text("Email") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Email,
-                                contentDescription = "Email"
+                        label = {
+                            Text(
+                                "Email",
+                                color = if (emailFocused) MaterialTheme.colorScheme.tertiary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                        },
+                        leadingIcon = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(start = 12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Email,
+                                    contentDescription = "Email",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = if (emailFocused) MaterialTheme.colorScheme.tertiary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = " | ",
+                                    fontSize = 28.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (emailFocused) MaterialTheme.colorScheme.tertiary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 16.dp),
+                            .padding(bottom = 16.dp)
+                            .onFocusChanged(onFocusChanged = { emailFocused = it.isFocused }),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Email,
                             imeAction = ImeAction.Next
@@ -130,7 +172,7 @@ fun AuthScreen(
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.surface,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.tertiaryContainer,
                             unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(
                                 alpha = 0.5f
                             )
@@ -141,16 +183,40 @@ fun AuthScreen(
                     OutlinedTextField(
                         value = uiState.password,
                         onValueChange = viewModel::onPasswordChange,
-                        label = { Text("Password") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = "Password"
+                        label = {
+                            Text(
+                                "Password",
+                                color = if (passwordFocused) MaterialTheme.colorScheme.tertiary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
+                        leadingIcon = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(start = 12.dp)
+                            ) {
+
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = "Password",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = if (passwordFocused) MaterialTheme.colorScheme.tertiary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = " | ", fontSize = 28.sp, fontWeight = FontWeight.Bold,
+                                    color = if (passwordFocused) MaterialTheme.colorScheme.tertiary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 24.dp),
+                            .padding(bottom = 24.dp)
+                            .onFocusChanged(
+                                onFocusChanged = { passwordFocused = it.isFocused }
+                            ),
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
@@ -161,7 +227,7 @@ fun AuthScreen(
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.surface,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.tertiaryContainer,
                             unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(
                                 alpha = 0.5f
                             )
@@ -202,17 +268,28 @@ fun AuthScreen(
                         }
                     }
 
-                    // Toggle between Sign In and Sign Up
-                    TextButton(
-                        onClick = { isSignUp = !isSignUp },
-                        modifier = Modifier.padding(top = 16.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = if (isSignUp) "Already have an account? Sign In" else "Don't have an account? Sign Up",
+                            text = if (isSignUp) "Already have an account?" else "Don't have an account?",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            modifier = Modifier.padding(vertical = 8.dp)
                         )
+
+                        TextButton(
+                            onClick = { isSignUp = !isSignUp },
+                        ) {
+                            Text(
+                                text = if (isSignUp) "Sign In" else "Sign Up",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
                     }
+
                 }
             }
         }

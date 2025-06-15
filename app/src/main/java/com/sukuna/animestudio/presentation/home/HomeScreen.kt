@@ -1,5 +1,6 @@
 package com.sukuna.animestudio.presentation.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,8 +39,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sukuna.animestudio.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,28 +56,51 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            LargeTopAppBar(
-                title = {
-                    Text(
-                        text = "AnimeStudio",
-                        style = MaterialTheme.typography.headlineLarge
-                    )
-                },
-                colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.primary
-                ),
-                actions = {
-                    IconButton(onClick = onNavigateToProfile) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Profile"
+            Box {
+                Image(
+                    painter = painterResource(id = R.drawable.home_screen_bg),
+                    contentDescription = null,
+                    contentScale = ContentScale.FillBounds,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(170.dp) // ⬅️ instead of matchParentSize()
+                )
+                LargeTopAppBar(
+                    title = {
+                        Text(
+                            text = "Anime Studio",
+                            style = MaterialTheme.typography.headlineLarge,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            MaterialTheme.colorScheme.primary,
+                                        )
+                                    )
+                                ),
+                            textAlign = TextAlign.End,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
                         )
+                    },
+                    colors = TopAppBarDefaults.largeTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
+                        titleContentColor = MaterialTheme.colorScheme.primary
+                    ),
+                    actions = {
+                        IconButton(onClick = onNavigateToProfile) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Profile"
+                            )
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     ) { paddingValues ->
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
