@@ -29,9 +29,15 @@ class AuthViewModel @Inject constructor(
 
     fun onSignInClick() {
         viewModelScope.launch {
+            val email = _uiState.value.email.trim()
+            val password = _uiState.value.password.trim()
+            if (email.isBlank() || password.isBlank()) {
+                _uiState.update { it.copy(error = "Email and password cannot be empty") }
+                return@launch
+            }
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                authRepository.signIn(_uiState.value.email, _uiState.value.password)
+                authRepository.signIn(email, password)
                     .onSuccess {
                         _uiState.update { state ->
                             state.copy(
@@ -61,9 +67,15 @@ class AuthViewModel @Inject constructor(
 
     fun onSignUpClick() {
         viewModelScope.launch {
+            val email = _uiState.value.email.trim()
+            val password = _uiState.value.password.trim()
+            if (email.isBlank() || password.isBlank()) {
+                _uiState.update { it.copy(error = "Email and password cannot be empty") }
+                return@launch
+            }
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                authRepository.signUp(_uiState.value.email, _uiState.value.password)
+                authRepository.signUp(email, password)
                     .onSuccess {
                         _uiState.update { state ->
                             state.copy(

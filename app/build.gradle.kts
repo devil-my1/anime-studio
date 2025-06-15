@@ -52,12 +52,9 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.play.services.auth)
-    implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.storage.ktx)
     implementation(libs.firebase.database.ktx)
-
-    implementation(libs.play.services.auth)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
 
@@ -71,7 +68,6 @@ dependencies {
     implementation(libs.androidx.security.crypto.ktx)
 
     // Image Loading
-    implementation(libs.coil.compose)
     implementation(libs.coil)
 
 
