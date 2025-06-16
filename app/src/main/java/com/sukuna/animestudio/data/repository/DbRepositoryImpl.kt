@@ -12,80 +12,106 @@ import javax.inject.Singleton
 class DbRepositoryImpl @Inject constructor(
     private val firebaseDb: FirebaseFirestore
 ) : DbRepository {
-    override suspend fun getUserById(userId: String): User {
-        return firebaseDb.collection("users").document(userId).get()
-            .await()
-            .toObject(User::class.java) ?: User()
+
+    private val usersCollection = firebaseDb.collection("users")
+    private val animeCollection = firebaseDb.collection("animes")
+
+    override suspend fun getUserById(userId: String): User? {
+        return try {
+            usersCollection.document(userId).get().await().toObject(User::class.java)
+        } catch (e: Exception) {
+            Log.e("DbRepositoryImpl", "Error fetching user", e)
+            null
+        }
 
     }
 
     override suspend fun getAllUsers(): List<User> {
-        return firebaseDb.collection("users").get()
-            .await()
-            .documents
-            .mapNotNull { it.toObject(User::class.java) }
-    }
-
-    override suspend fun addUser(user: User): Long {
-        return firebaseDb.collection("users").add(user)
-            .await()
-            .id.hashCode().toLong() // Using hashCode as a placeholder for ID
-    }
-
-    override suspend fun updateUser(user: User): Int {
         return try {
-            val result = firebaseDb.collection("users").document(user.id).set(user)
-                .await()
-            result.let { 1 } // Assuming 1 indicates success
+            usersCollection.get().await().documents.mapNotNull { it.toObject(User::class.java) }
+        } catch (e: Exception) {
+            Log.e("DbRepositoryImpl", "Error fetching users", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun addUser(user: User): String {
+        return try {
+            usersCollection.document(user.id).set(user).await()
+            user.id
+        } catch (e: Exception) {
+            Log.e("DbRepositoryImpl", "Error adding user", e)
+            ""
+        }
+    }
+
+    override suspend fun updateUser(user: User): Boolean {
+        return try {
+            usersCollection.document(user.id).set(user).await()
+            true
         } catch (e: Exception) {
             Log.e("DbRepositoryImpl", "Error updating user", e)
-            e.printStackTrace()
-            -1
+            false
         }
 
     }
 
-    override suspend fun deleteUser(userId: String): Int {
-        return firebaseDb.collection("users").document(userId).delete()
-            .await()
-            .let { 1 } // Assuming 1 indicates success
+    override suspend fun deleteUser(userId: String): Boolean {
+        return try {
+            usersCollection.document(userId).delete().await()
+            true
+        } catch (e: Exception) {
+            Log.e("DbRepositoryImpl", "Error deleting user", e)
+            false
+        }
     }
 
-    override suspend fun getAnimeById(animeId: String): Anime {
-        return firebaseDb.collection("animes").document(animeId).get()
-            .await()
-            .toObject(Anime::class.java) ?: Anime() // Return an empty Anime object if not found
+    override suspend fun getAnimeById(animeId: String): Anime? {
+        return try {
+            animeCollection.document(animeId).get().await().toObject(Anime::class.java)
+        } catch (e: Exception) {
+            Log.e("DbRepositoryImpl", "Error fetching anime", e)
+            null
+        }
     }
 
     override suspend fun getAllAnimes(): List<Anime> {
-        return firebaseDb.collection("animes").get()
-            .await()
-            .documents
-            .mapNotNull { it.toObject(Anime::class.java) }
-    }
-
-    override suspend fun addAnime(anime: Anime): Long {
-        return firebaseDb.collection("animes").add(anime)
-            .await()
-            .id.toLong() // Assuming the ID is a string representation of a long
-    }
-
-    override suspend fun updateAnime(anime: Anime): Int {
         return try {
-            firebaseDb.collection("animes").document(anime.id).set(anime)
-                .await()
-            1 // Assuming 1 indicates success
+            animeCollection.get().await().documents.mapNotNull { it.toObject(Anime::class.java) }
         } catch (e: Exception) {
-            Log.e("DbRepositoryImpl", "Error updating anime", e)
-            e.printStackTrace()
-            -1 // Indicating failure
+            Log.e("DbRepositoryImpl", "Error fetching animes", e)
+            emptyList()
         }
     }
 
-    override suspend fun deleteAnime(animeId: String): Int {
-        return firebaseDb.collection("animes").document(animeId).delete()
-            .await()
-            .let { 1 } // Assuming 1 indicates success
+    override suspend fun addAnime(anime: Anime): String {
+        return try {
+            animeCollection.document(anime.id).set(anime).await()
+            anime.id
+        } catch (e: Exception) {
+            Log.e("DbRepositoryImpl", "Error adding anime", e)
+            ""
+        }
+    }
+
+    override suspend fun updateAnime(anime: Anime): Boolean {
+        return try {
+            animeCollection.document(anime.id).set(anime).await()
+            true
+        } catch (e: Exception) {
+            Log.e("DbRepositoryImpl", "Error updating anime", e)
+            false
+        }
+    }
+
+    override suspend fun deleteAnime(animeId: String): Boolean {
+        return try {
+            animeCollection.document(animeId).delete().await()
+            true
+        } catch (e: Exception) {
+            Log.e("DbRepositoryImpl", "Error deleting anime", e)
+            false
+        }
     }
 
 }
