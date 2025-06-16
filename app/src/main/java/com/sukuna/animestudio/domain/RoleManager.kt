@@ -35,4 +35,8 @@ class RoleManager @Inject constructor() {
     fun isRegularUser(user: User?): Boolean {
         return user?.role == UserRole.USER
     }
-} 
+
+    fun isGuest(user: User?): Boolean {
+        return user?.role == UserRole.GUEST || user == null
+    }
+}

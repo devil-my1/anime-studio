@@ -107,6 +107,15 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Allow the user to bypass authentication and use the app as a guest.
+     * This simply marks the UI state as authenticated so navigation proceeds
+     * to the home screen where a null user maps to the GUEST role.
+     */
+    fun continueAsGuest() {
+        _uiState.update { it.copy(isAuthenticated = true) }
+    }
+
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }

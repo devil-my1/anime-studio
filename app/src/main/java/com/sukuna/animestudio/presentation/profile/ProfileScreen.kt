@@ -192,7 +192,7 @@ fun ProfileScreen(
                     )
                 ) {
                     Text(
-                        text = uiState.user?.role?.name ?: "USER",
+                        text = uiState.user?.role?.name ?: "GUEST",
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimary

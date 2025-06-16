@@ -305,6 +305,20 @@ fun AuthScreen(
                         }
                     }
 
+                    // Option to skip authentication and continue as a guest
+                    TextButton(
+                        onClick = viewModel::continueAsGuest,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Continue as Guest",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
                 }
             }
         }

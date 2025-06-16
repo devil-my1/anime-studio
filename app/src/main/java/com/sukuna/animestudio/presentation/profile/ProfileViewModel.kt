@@ -190,8 +190,8 @@ class ProfileViewModel @Inject constructor(
 }
 
 data class ProfileUiState(
-    val user: User? = User(),
+    val user: User? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
     val isSignedOut: Boolean = false
-) 
+)
