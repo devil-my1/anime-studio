@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,14 +46,19 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.sukuna.animestudio.domain.RoleManager
 import com.sukuna.animestudio.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToProfile: () -> Unit
+    onNavigateToProfile: () -> Unit,
+    viewModel: HomeViewModel = hiltViewModel(),
+    roleManager: RoleManager
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -181,6 +187,26 @@ fun HomeScreen(
                         ContinueWatchingCard(anime = anime)
                     }
                 }
+
+                if (uiState.canEditAnime(roleManager) || uiState.canManageUsers(roleManager)) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = "Admin Tools",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (uiState.canEditAnime(roleManager)) {
+                            AdminActionButton(label = "Add Anime")
+                        }
+                        if (uiState.canManageUsers(roleManager)) {
+                            AdminActionButton(label = "Manage Users")
+                        }
+                    }
+                }
             }
         }
     }
@@ -261,10 +287,24 @@ private fun ContinueWatchingCard(anime: String) {
                 Text(
                     text = "Episode 12 • 24:00",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun AdminActionButton(label: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(16.dp),
+            color = MaterialTheme.colorScheme.onPrimary,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -274,4 +314,4 @@ private val sampleAnimeList = listOf(
     "Attack on Titan",
     "My Hero Academia",
     "Black Clover"
-) 
+)

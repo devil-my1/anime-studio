@@ -1,7 +1,12 @@
 package com.sukuna.animestudio.domain.model
 
 enum class UserRole {
-    USER,           // Regular user with basic permissions
-    MODERATOR,      // Can moderate content and users
-    ADMIN           // Full system access
-} 
+    /** User that isn't authenticated */
+    GUEST,
+    /** Regular user with basic permissions */
+    USER,
+    /** Can moderate content and users */
+    MODERATOR,
+    /** Full system access */
+    ADMIN
+}
