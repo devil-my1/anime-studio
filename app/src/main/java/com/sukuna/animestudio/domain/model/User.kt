@@ -6,6 +6,7 @@ data class User(
     val username: String = "",
     val profilePictureUrl: String = "",
     val bio: String = "",
+    val role: UserRole = UserRole.USER,
     val favoriteAnime: List<Anime> = emptyList(),
     val watchlist: List<Anime> = emptyList(),
     val completedAnime: List<Anime> = emptyList(),

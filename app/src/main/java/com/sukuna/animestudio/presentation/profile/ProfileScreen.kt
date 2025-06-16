@@ -52,12 +52,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.sukuna.animestudio.R
 import com.sukuna.animestudio.domain.model.Anime
+import com.sukuna.animestudio.domain.model.UserRole
 import com.sukuna.animestudio.presentation.components.LoadingIndicator
 
 @SuppressLint("DefaultLocale")
@@ -70,6 +72,7 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showEditDialog by remember { mutableStateOf(false) }
     var showImageOptions by remember { mutableStateOf(false) }
+    var showSignOutDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -84,12 +87,41 @@ fun ProfileScreen(
         }
     }
 
+    if (showSignOutDialog) {
+        AlertDialog(
+            onDismissRequest = { showSignOutDialog = false },
+            title = { Text("Sign Out") },
+            text = { Text("Are you sure you want to sign out?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showSignOutDialog = false
+                        viewModel.signOut()
+                    }
+                ) {
+                    Text("Sign Out")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showSignOutDialog = false }
+                ) {
+                    Text(
+                        "Cancel",
+                        color = MaterialTheme.colorScheme.tertiary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Profile") },
                 actions = {
-                    IconButton(onClick = { viewModel.signOut() }) {
+                    IconButton(onClick = { showSignOutDialog = true }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                             contentDescription = "Sign Out"
@@ -145,6 +177,27 @@ fun ProfileScreen(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Role Badge
+                Card(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = when (uiState.user?.role) {
+                            UserRole.ADMIN -> MaterialTheme.colorScheme.error
+                            UserRole.MODERATOR -> MaterialTheme.colorScheme.tertiary
+                            else -> MaterialTheme.colorScheme.primary
+                        }
+                    )
+                ) {
+                    Text(
+                        text = uiState.user?.role?.name ?: "USER",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
