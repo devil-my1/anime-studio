@@ -74,7 +74,7 @@ class ProfileViewModel @Inject constructor(
                     )
                 }
                 val updRes = dbRepository.updateUser(_uiState.value.user!!)
-                if (updRes > 0) {
+                if (updRes) {
                     _uiState.update { state ->
                         state.copy(
                             error = null,
