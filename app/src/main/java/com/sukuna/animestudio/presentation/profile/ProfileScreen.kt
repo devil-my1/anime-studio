@@ -25,7 +25,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -58,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.sukuna.animestudio.R
+import com.sukuna.animestudio.domain.model.Anime
 import com.sukuna.animestudio.presentation.components.LoadingIndicator
 
 @SuppressLint("DefaultLocale")
@@ -110,7 +110,7 @@ fun ProfileScreen(
                 // Profile Picture with Upload Option
                 Box {
                     AsyncImage(
-                        model = uiState.user.profilePictureUrl.ifEmpty { "https://via.placeholder.com/150" },
+                        model = uiState.user?.profilePictureUrl?.ifEmpty { "https://via.placeholder.com/150" },
                         contentDescription = "Profile Picture",
                         modifier = Modifier
                             .size(120.dp)
@@ -133,7 +133,7 @@ fun ProfileScreen(
 
                 // Username
                 Text(
-                    text = uiState.user.username,
+                    text = uiState.user?.username ?: "Guest",
                     style = MaterialTheme.typography.headlineMedium
                 )
 
@@ -141,7 +141,7 @@ fun ProfileScreen(
 
                 // Email
                 Text(
-                    text = uiState.user.email,
+                    text = uiState.user?.email ?: "",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -175,7 +175,7 @@ fun ProfileScreen(
                             }
                         }
                         Text(
-                            text = uiState.user.bio,
+                            text = uiState.user?.bio ?: "No bio available",
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Start
                         )
@@ -191,42 +191,29 @@ fun ProfileScreen(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Stats Grid
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    StatCard(
-                        title = "Total Episodes",
-                        value = uiState.user.totalEpisodesWatched.toString()
-                    )
-                    StatCard(
-                        title = "Average Rating",
-                        value = String.format("%.1f", uiState.user.averageRating)
-                    )
-                }
+
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Anime Lists
                 AnimeListSection(
                     title = "Currently Watching",
-                    animeList = uiState.user.watchingAnime
+                    animeList = uiState.user?.watchingAnime ?: emptyList()
                 )
 
                 AnimeListSection(
                     title = "Completed",
-                    animeList = uiState.user.completedAnime
+                    animeList = uiState.user?.completedAnime ?: emptyList()
                 )
 
                 AnimeListSection(
                     title = "Plan to Watch",
-                    animeList = uiState.user.watchlist
+                    animeList = uiState.user?.watchlist ?: emptyList()
                 )
 
                 AnimeListSection(
                     title = "Dropped",
-                    animeList = uiState.user.droppedAnime
+                    animeList = uiState.user?.droppedAnime ?: emptyList()
                 )
             }
         }
@@ -251,11 +238,12 @@ fun ProfileScreen(
         }
     }
 
-    // Edit Profile Dialog
+
+// Edit Profile Dialog
     if (showEditDialog) {
         EditProfileDialog(
-            currentUsername = uiState.user.username,
-            currentBio = uiState.user.bio,
+            currentUsername = uiState.user?.username ?: "",
+            currentBio = uiState.user?.bio ?: "",
             onDismiss = { showEditDialog = false },
             onSave = { username, bio ->
                 viewModel.updateProfile(username, bio)
@@ -264,7 +252,7 @@ fun ProfileScreen(
         )
     }
 
-    // Image Options Dialog
+// Image Options Dialog
     if (showImageOptions) {
         AlertDialog(
             onDismissRequest = { showImageOptions = false },
@@ -279,7 +267,7 @@ fun ProfileScreen(
                     ) {
                         Text("Choose from Gallery")
                     }
-                    if (uiState.user.profilePictureUrl.isNotEmpty()) {
+                    if (uiState.user?.profilePictureUrl?.isNotEmpty() == true) {
                         TextButton(
                             onClick = {
                                 viewModel.deleteProfilePicture()
@@ -330,7 +318,7 @@ private fun StatCard(
 @Composable
 private fun AnimeListSection(
     title: String,
-    animeList: List<String>
+    animeList: List<Anime>
 ) {
     Card(
         modifier = Modifier
@@ -354,7 +342,7 @@ private fun AnimeListSection(
             } else {
                 animeList.forEach { anime ->
                     Text(
-                        text = "• $anime",
+                        text = "• ${anime.title}",
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )

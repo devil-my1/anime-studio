@@ -1,9 +1,11 @@
 package com.sukuna.animestudio.presentation.profile
 
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sukuna.animestudio.data.repository.AuthRepository
+import com.sukuna.animestudio.data.repository.DbRepository
 import com.sukuna.animestudio.data.repository.StorageRepository
 import com.sukuna.animestudio.domain.model.User
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,7 +19,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val storageRepository: StorageRepository
+    private val storageRepository: StorageRepository,
+    private val dbRepository: DbRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -37,37 +40,16 @@ class ProfileViewModel @Inject constructor(
             try {
                 val currentUser = authRepository.currentUser
                 if (currentUser != null) {
+                    val userData = dbRepository.getUserById(currentUser.uid)
                     _uiState.update { state ->
                         state.copy(
-                            user = User(
-                                id = currentUser.uid,
-                                email = currentUser.email ?: "",
-                                username = currentUser.displayName ?: "User",
-                                profilePictureUrl = currentUser.photoUrl?.toString() ?: "",
-                                bio = "Welcome to my profile!",
-                                favoriteAnime = listOf("Naruto", "One Piece", "Attack on Titan"),
-                                watchlist = listOf(
-                                    "Jujutsu Kaisen",
-                                    "Demon Slayer",
-                                    "My Hero Academia"
-                                ),
-                                completedAnime = listOf(
-                                    "Death Note",
-                                    "Fullmetal Alchemist",
-                                    "Steins;Gate"
-                                ),
-                                watchingAnime = listOf(
-                                    "One Punch Man",
-                                    "Tokyo Ghoul",
-                                    "Hunter x Hunter"
-                                ),
-                                droppedAnime = listOf("Bleach", "Fairy Tail", "Sword Art Online")
-                            ),
+                            user = userData,
                             isLoading = false
                         )
                     }
                 }
             } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error loading user profile: ${e.message}")
                 _uiState.update { state ->
                     state.copy(
                         error = e.message,
@@ -82,16 +64,32 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // TODO: Implement actual profile update in Firestore
                 _uiState.update { state ->
                     state.copy(
-                        user = state.user.copy(
+                        user = state.user?.copy(
                             username = username,
                             bio = bio
                         ),
                         isLoading = false
                     )
                 }
+                val updRes = dbRepository.updateUser(_uiState.value.user!!)
+                if (updRes > 0) {
+                    _uiState.update { state ->
+                        state.copy(
+                            error = null,
+                            isLoading = false
+                        )
+                    }
+                } else {
+                    _uiState.update { state ->
+                        state.copy(
+                            error = "Failed to update profile",
+                            isLoading = false
+                        )
+                    }
+                }
+
             } catch (e: Exception) {
                 _uiState.update { state ->
                     state.copy(
@@ -113,7 +111,7 @@ class ProfileViewModel @Inject constructor(
                         .onSuccess { downloadUrl ->
                             _uiState.update { state ->
                                 state.copy(
-                                    user = state.user.copy(profilePictureUrl = downloadUrl),
+                                    user = state.user?.copy(profilePictureUrl = downloadUrl),
                                     isLoading = false
                                 )
                             }
@@ -148,7 +146,7 @@ class ProfileViewModel @Inject constructor(
                         .onSuccess {
                             _uiState.update { state ->
                                 state.copy(
-                                    user = state.user.copy(profilePictureUrl = ""),
+                                    user = state.user?.copy(profilePictureUrl = ""),
                                     isLoading = false
                                 )
                             }
@@ -192,7 +190,7 @@ class ProfileViewModel @Inject constructor(
 }
 
 data class ProfileUiState(
-    val user: User = User(),
+    val user: User? = User(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val isSignedOut: Boolean = false

@@ -44,17 +44,21 @@ android {
 
 dependencies {
 
+    // Core Libraries
     implementation(libs.androidx.navigation.compose)
     implementation(libs.gson)
     implementation(libs.coil.svg)
     implementation(libs.coil.compose)
 
+    // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.play.services.auth)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.storage.ktx)
     implementation(libs.firebase.database.ktx)
+
+    // Kotlin Coroutines
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
 
@@ -69,8 +73,6 @@ dependencies {
 
     // Image Loading
     implementation(libs.coil)
-
-
 
 
     implementation(libs.androidx.core.ktx)
