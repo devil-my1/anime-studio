@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
@@ -67,9 +68,15 @@ import com.sukuna.animestudio.presentation.components.LoadingIndicator
 @Composable
 fun ProfileScreen(
     onSignOut: () -> Unit,
+    onBack: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val currentUser by viewModel.currentUser.collectAsState()
+    
+    // Use currentUser for real-time updates, fallback to uiState.user
+    val user = currentUser ?: uiState.user
+    
     var showEditDialog by remember { mutableStateOf(false) }
     var showImageOptions by remember { mutableStateOf(false) }
     var showSignOutDialog by remember { mutableStateOf(false) }
@@ -99,7 +106,11 @@ fun ProfileScreen(
                         viewModel.signOut()
                     }
                 ) {
-                    Text("Sign Out")
+                    Text(
+                        "Sign Out",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
@@ -108,7 +119,7 @@ fun ProfileScreen(
                 ) {
                     Text(
                         "Cancel",
-                        color = MaterialTheme.colorScheme.tertiary,
+                        color = MaterialTheme.colorScheme.secondary,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -119,7 +130,22 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profile") },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back to Home",
+                            )
+                        }
+                        Text(
+                            text = "Profile",
+                            style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                    }
+                },
                 actions = {
                     IconButton(onClick = { showSignOutDialog = true }) {
                         Icon(
@@ -142,7 +168,7 @@ fun ProfileScreen(
                 // Profile Picture with Upload Option
                 Box {
                     AsyncImage(
-                        model = uiState.user?.profilePictureUrl?.ifEmpty { "https://via.placeholder.com/150" },
+                        model = user?.profilePictureUrl?.ifEmpty { "https://via.placeholder.com/150" },
                         contentDescription = "Profile Picture",
                         modifier = Modifier
                             .size(120.dp)
@@ -165,7 +191,7 @@ fun ProfileScreen(
 
                 // Username
                 Text(
-                    text = uiState.user?.username ?: "Guest",
+                    text = user?.username ?: "Guest",
                     style = MaterialTheme.typography.headlineMedium
                 )
 
@@ -173,7 +199,7 @@ fun ProfileScreen(
 
                 // Email
                 Text(
-                    text = uiState.user?.email ?: "",
+                    text = user?.email ?: "",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -184,15 +210,16 @@ fun ProfileScreen(
                 Card(
                     modifier = Modifier.padding(vertical = 4.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = when (uiState.user?.role) {
+                        containerColor = when (user?.role) {
                             UserRole.ADMIN -> MaterialTheme.colorScheme.error
                             UserRole.MODERATOR -> MaterialTheme.colorScheme.tertiary
+                            UserRole.GUEST -> MaterialTheme.colorScheme.secondary
                             else -> MaterialTheme.colorScheme.primary
                         }
                     )
                 ) {
                     Text(
-                        text = uiState.user?.role?.name ?: "GUEST",
+                        text = user?.role?.name ?: "GUEST",
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimary
@@ -228,7 +255,7 @@ fun ProfileScreen(
                             }
                         }
                         Text(
-                            text = uiState.user?.bio ?: "No bio available",
+                            text = user?.bio ?: "No bio available",
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Start
                         )
@@ -251,22 +278,22 @@ fun ProfileScreen(
                 // Anime Lists
                 AnimeListSection(
                     title = "Currently Watching",
-                    animeList = uiState.user?.watchingAnime ?: emptyList()
+                    animeList = user?.watchingAnime ?: emptyList()
                 )
 
                 AnimeListSection(
                     title = "Completed",
-                    animeList = uiState.user?.completedAnime ?: emptyList()
+                    animeList = user?.completedAnime ?: emptyList()
                 )
 
                 AnimeListSection(
                     title = "Plan to Watch",
-                    animeList = uiState.user?.watchlist ?: emptyList()
+                    animeList = user?.watchlist ?: emptyList()
                 )
 
                 AnimeListSection(
                     title = "Dropped",
-                    animeList = uiState.user?.droppedAnime ?: emptyList()
+                    animeList = user?.droppedAnime ?: emptyList()
                 )
             }
         }
@@ -295,8 +322,8 @@ fun ProfileScreen(
 // Edit Profile Dialog
     if (showEditDialog) {
         EditProfileDialog(
-            currentUsername = uiState.user?.username ?: "",
-            currentBio = uiState.user?.bio ?: "",
+            currentUsername = user?.username ?: "",
+            currentBio = user?.bio ?: "",
             onDismiss = { showEditDialog = false },
             onSave = { username, bio ->
                 viewModel.updateProfile(username, bio)
@@ -320,7 +347,7 @@ fun ProfileScreen(
                     ) {
                         Text("Choose from Gallery")
                     }
-                    if (uiState.user?.profilePictureUrl?.isNotEmpty() == true) {
+                    if (user?.profilePictureUrl?.isNotEmpty() == true) {
                         TextButton(
                             onClick = {
                                 viewModel.deleteProfilePicture()

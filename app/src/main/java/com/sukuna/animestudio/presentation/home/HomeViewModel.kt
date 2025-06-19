@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.sukuna.animestudio.data.repository.AuthRepository
 import com.sukuna.animestudio.data.repository.DbRepository
 import com.sukuna.animestudio.domain.RoleManager
+import com.sukuna.animestudio.domain.UserManager
 import com.sukuna.animestudio.domain.model.User
 import com.sukuna.animestudio.domain.model.UserRole
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,7 +20,8 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val dbRepository: DbRepository,
-    private val roleManager: RoleManager
+    private val roleManager: RoleManager,
+    private val userManager: UserManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -29,6 +31,9 @@ class HomeViewModel @Inject constructor(
         initialValue = HomeUiState()
     )
 
+    // Expose UserManager's currentUser for real-time updates
+    val currentUser: StateFlow<User?> = userManager.currentUser
+
     init {
         loadUser()
     }
@@ -36,11 +41,18 @@ class HomeViewModel @Inject constructor(
     private fun loadUser() {
         viewModelScope.launch {
             val currentUser = authRepository.currentUser
-            val userData = if (currentUser != null) {
-                dbRepository.getUserById(currentUser.uid)
-            } else null
-            _uiState.update { state ->
-                state.copy(user = userData)
+            if (currentUser != null) {
+                // First try to get from UserManager (for real-time updates)
+                val userData = userManager.currentUser.value ?: dbRepository.getUserById(currentUser.uid)
+                
+                // Update UserManager if we fetched from DB
+                if (userData != null && userManager.currentUser.value == null) {
+                    userManager.updateCurrentUser(userData)
+                }
+                
+                _uiState.update { state ->
+                    state.copy(user = userData)
+                }
             }
         }
     }
@@ -57,4 +69,10 @@ data class HomeUiState(
 
     fun canManageUsers(roleManager: RoleManager) =
         roleManager.canManageUsers(user)
+
+    fun canModerateContent(roleManager: RoleManager) =
+        roleManager.canModerateContent(user)
+
+    fun isGuest(roleManager: RoleManager) =
+        roleManager.isGuest(user)
 }
