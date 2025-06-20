@@ -187,6 +187,7 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 authRepository.signOut()
+                userManager.clearUser()
                 _uiState.update { it.copy(isSignedOut = true) }
             } catch (e: Exception) {
                 _uiState.update { state ->

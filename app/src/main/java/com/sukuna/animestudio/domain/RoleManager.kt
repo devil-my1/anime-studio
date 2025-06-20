@@ -7,7 +7,6 @@ import javax.inject.Singleton
 
 @Singleton
 class RoleManager @Inject constructor() {
-    
     fun canModerateContent(user: User?): Boolean {
         return user?.role == UserRole.MODERATOR || user?.role == UserRole.ADMIN
     }

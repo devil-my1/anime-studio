@@ -23,6 +23,7 @@ fun NavGraph(
     navController: NavHostController,
     startDestination: String = Screen.Auth.route
 ) {
+    val roleManager = remember { RoleManager() }
     NavHost(
         navController = navController,
         startDestination = startDestination
@@ -38,7 +39,6 @@ fun NavGraph(
         }
 
         composable(Screen.Home.route) {
-            val roleManager = remember { RoleManager() }
             HomeScreen(
                 onNavigateToProfile = {
                     navController.navigate(Screen.Profile.route)
@@ -57,7 +57,8 @@ fun NavGraph(
                         popUpTo(Screen.Home.route) { inclusive = true }
                     }
                 },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                roleManager = roleManager
             )
         }
 
