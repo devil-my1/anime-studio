@@ -37,6 +37,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -71,10 +72,11 @@ fun HomeScreen(
                 Image(
                     painter = painterResource(id = R.drawable.home_screen_bg),
                     contentDescription = null,
-                    contentScale = ContentScale.FillBounds,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(170.dp)
+                        .height(170.dp),
+                    alignment = BiasAlignment(horizontalBias = 0f, verticalBias = -1.5f)
                 )
                 LargeTopAppBar(
                     title = {

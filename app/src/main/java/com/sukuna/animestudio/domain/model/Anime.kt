@@ -1,5 +1,7 @@
 package com.sukuna.animestudio.domain.model
 
+import kotlin.random.Random
+
 data class Anime(
     val id: String = "",
     val title: String = "",
@@ -7,14 +9,26 @@ data class Anime(
     val imageUrl: String = "",
     val genre: List<AnimeGenre> = emptyList(),
     val rating: Double = 0.0,
-    val episodes: Int = 12,
+    val episodesCount: Int = 12,
+    val episodes: List<Episode> = emptyList(),
     val status: Status = Status.NOT_STARTED,
     val animeStatus: AnimeStatus = AnimeStatus.IN_PROGRESS,
     val isFavorite: Boolean = false,
     val isWatched: Boolean = false,
     val isInWatchlist: Boolean = false,
     val releaseDate: String = "",
-    )
+)
+
+data class Episode(
+    val id: String = Random.nextInt().toString(),
+    val title: String = "",
+    val description: String = "",
+    val episodeNumber: Int = 1,
+    val animeId: String = "",
+    val imageUrl: String = "",
+    val duration: Int = 24, // in minutes
+    val isWatched: Boolean = false,
+)
 
 enum class Status {
     NOT_STARTED,

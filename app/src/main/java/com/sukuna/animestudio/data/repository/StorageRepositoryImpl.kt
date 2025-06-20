@@ -10,6 +10,8 @@ import javax.inject.Singleton
 class StorageRepositoryImpl @Inject constructor(
     private val storage: FirebaseStorage
 ) : StorageRepository {
+    private val TAG = "StorageRepositoryImpl"
+    private val BASE_URL = "gs://animestudioapp.firebasestorage.app"
 
     override suspend fun uploadProfilePicture(userId: String, imageUri: Uri): Result<String> {
         return try {
@@ -37,4 +39,5 @@ class StorageRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
 } 
