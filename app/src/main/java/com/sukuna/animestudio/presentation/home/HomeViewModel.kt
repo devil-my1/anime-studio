@@ -20,7 +20,6 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val dbRepository: DbRepository,
-    private val roleManager: RoleManager,
     private val userManager: UserManager
 ) : ViewModel() {
 

@@ -98,7 +98,7 @@ fun UserManagementDialog(
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.weight(1f)
                     )
-                    Button(onClick = onDismiss) { Text("Close") }
+                    OutlinedButton (onClick = onDismiss) { Text("Close", color = MaterialTheme.colorScheme.primary) }
                 }
                 // Search
                 OutlinedTextField(

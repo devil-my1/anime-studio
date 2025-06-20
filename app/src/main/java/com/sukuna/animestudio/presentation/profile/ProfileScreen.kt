@@ -9,6 +9,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -57,8 +59,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.sukuna.animestudio.R
+import com.sukuna.animestudio.domain.RoleManager
 import com.sukuna.animestudio.domain.model.Anime
 import com.sukuna.animestudio.domain.model.UserRole
 import com.sukuna.animestudio.presentation.components.LoadingIndicator
@@ -69,14 +72,15 @@ import com.sukuna.animestudio.presentation.components.LoadingIndicator
 fun ProfileScreen(
     onSignOut: () -> Unit,
     onBack: () -> Unit,
-    viewModel: ProfileViewModel = hiltViewModel()
+    viewModel: ProfileViewModel = hiltViewModel(),
+    roleManager: RoleManager
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
-    
+
     // Use currentUser for real-time updates, fallback to uiState.user
     val user = currentUser ?: uiState.user
-    
+
     var showEditDialog by remember { mutableStateOf(false) }
     var showImageOptions by remember { mutableStateOf(false) }
     var showSignOutDialog by remember { mutableStateOf(false) }
@@ -107,8 +111,8 @@ fun ProfileScreen(
                     }
                 ) {
                     Text(
-                        "Sign Out",
-                        color = MaterialTheme.colorScheme.error,
+                        if (roleManager.isGuest(user)) "Sign In" else "Sign Out",
+                        color = if (roleManager.isGuest(user)) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -119,7 +123,7 @@ fun ProfileScreen(
                 ) {
                     Text(
                         "Cancel",
-                        color = MaterialTheme.colorScheme.secondary,
+                        color = if (roleManager.isGuest(user)) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -167,24 +171,29 @@ fun ProfileScreen(
             item {
                 // Profile Picture with Upload Option
                 Box {
-                    AsyncImage(
-                        model = user?.profilePictureUrl?.ifEmpty { "https://via.placeholder.com/150" },
+                    Image(
+                        painter = rememberAsyncImagePainter(user?.profilePictureUrl?.ifEmpty { R.drawable.anime_icon }),
                         contentDescription = "Profile Picture",
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                         modifier = Modifier
                             .size(120.dp)
                             .clip(CircleShape),
                         contentScale = ContentScale.Crop
                     )
-                    IconButton(
-                        onClick = { showImageOptions = true },
-                        modifier = Modifier.align(Alignment.BottomEnd)
-                    ) {
-                        Icon(
-                            imageVector = ImageVector.vectorResource(id = R.drawable.image_ico),
-                            contentDescription = "Change Profile Picture",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    if (roleManager.isGuest(user) == false) {
+                        IconButton(
+                            onClick = { showImageOptions = true },
+                            modifier = Modifier.padding(top = 90.dp).align(Alignment.BottomEnd)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Change Profile Picture",
+                                tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                            )
+                        }
                     }
+
+
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -226,75 +235,85 @@ fun ProfileScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Bio
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+                if (roleManager.isGuest(user) == false) {
+                    // Edit Profile Button
+                    TextButton(
+                        onClick = { showEditDialog = true },
+                        modifier = Modifier.padding(vertical = 8.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Bio",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            IconButton(onClick = { showEditDialog = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "Edit Bio"
-                                )
-                            }
-                        }
-                        Text(
-                            text = user?.bio ?: "No bio available",
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Start
-                        )
+                        Text("Edit Profile")
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Bio
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Bio",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                IconButton(onClick = { showEditDialog = true }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit Bio"
+                                    )
+                                }
+                            }
+                            Text(
+                                text = user?.bio ?: "No bio available",
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Start
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Anime Statistics
+                    Text(
+                        text = "Anime Statistics",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Anime Lists
+                    AnimeListSection(
+                        title = "Currently Watching",
+                        animeList = user?.watchingAnime ?: emptyList()
+                    )
+
+                    AnimeListSection(
+                        title = "Completed",
+                        animeList = user?.completedAnime ?: emptyList()
+                    )
+
+                    AnimeListSection(
+                        title = "Plan to Watch",
+                        animeList = user?.watchlist ?: emptyList()
+                    )
+
+                    AnimeListSection(
+                        title = "Dropped",
+                        animeList = user?.droppedAnime ?: emptyList()
+                    )
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Anime Statistics
-                Text(
-                    text = "Anime Statistics",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Anime Lists
-                AnimeListSection(
-                    title = "Currently Watching",
-                    animeList = user?.watchingAnime ?: emptyList()
-                )
-
-                AnimeListSection(
-                    title = "Completed",
-                    animeList = user?.completedAnime ?: emptyList()
-                )
-
-                AnimeListSection(
-                    title = "Plan to Watch",
-                    animeList = user?.watchlist ?: emptyList()
-                )
-
-                AnimeListSection(
-                    title = "Dropped",
-                    animeList = user?.droppedAnime ?: emptyList()
-                )
             }
         }
 

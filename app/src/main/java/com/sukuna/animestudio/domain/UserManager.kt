@@ -1,6 +1,7 @@
 package com.sukuna.animestudio.domain
 
 import com.sukuna.animestudio.domain.model.User
+import com.sukuna.animestudio.domain.model.UserRole
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -25,4 +26,5 @@ class UserManager @Inject constructor() {
     fun clearUser() {
         _currentUser.value = null
     }
+
 } 
