@@ -1,6 +1,7 @@
 package com.sukuna.animestudio.di
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.sukuna.animestudio.data.repository.AuthRepository
 import com.sukuna.animestudio.data.repository.AuthRepositoryImpl
 import dagger.Module
@@ -19,7 +20,10 @@ object AuthModule {
 
     @Provides
     @Singleton
-    fun provideAuthRepository(firebaseAuth: FirebaseAuth): AuthRepository {
-        return AuthRepositoryImpl(firebaseAuth)
+    fun provideAuthRepository(
+        firebaseAuth: FirebaseAuth,
+        firebaseDb: FirebaseFirestore
+    ): AuthRepository {
+        return AuthRepositoryImpl(firebaseAuth, firebaseDb)
     }
 } 

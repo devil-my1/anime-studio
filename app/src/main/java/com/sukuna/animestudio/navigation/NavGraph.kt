@@ -1,9 +1,12 @@
 package com.sukuna.animestudio.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.sukuna.animestudio.domain.RoleManager
+import com.sukuna.animestudio.presentation.admin.AdminPanelScreen
 import com.sukuna.animestudio.presentation.auth.AuthScreen
 import com.sukuna.animestudio.presentation.home.HomeScreen
 import com.sukuna.animestudio.presentation.profile.ProfileScreen
@@ -12,6 +15,7 @@ sealed class Screen(val route: String) {
     object Auth : Screen("auth")
     object Home : Screen("home")
     object Profile : Screen("profile")
+    object AdminPanel : Screen("admin_panel")
 }
 
 @Composable
@@ -32,12 +36,17 @@ fun NavGraph(
                 }
             )
         }
-        
+
         composable(Screen.Home.route) {
+            val roleManager = remember { RoleManager() }
             HomeScreen(
                 onNavigateToProfile = {
                     navController.navigate(Screen.Profile.route)
-                }
+                },
+                onNavigateToAdminPanel = {
+                    navController.navigate(Screen.AdminPanel.route)
+                },
+                roleManager = roleManager
             )
         }
 
@@ -47,7 +56,14 @@ fun NavGraph(
                     navController.navigate(Screen.Auth.route) {
                         popUpTo(Screen.Home.route) { inclusive = true }
                     }
-                }
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.AdminPanel.route) {
+            AdminPanelScreen(
+                onBack = { navController.popBackStack() }
             )
         }
     }

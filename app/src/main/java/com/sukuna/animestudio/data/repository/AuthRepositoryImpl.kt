@@ -1,16 +1,21 @@
 package com.sukuna.animestudio.data.repository
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FirebaseFirestore
+import com.sukuna.animestudio.domain.model.User
+import com.sukuna.animestudio.domain.model.UserRole
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
-    private val firebaseAuth: FirebaseAuth
+    private val firebaseAuth: FirebaseAuth,
+    private val firebaseDb: FirebaseFirestore
 ) : AuthRepository {
-    
+
     override val currentUser: FirebaseUser?
         get() = firebaseAuth.currentUser
 
@@ -29,6 +34,14 @@ class AuthRepositoryImpl @Inject constructor(
         return try {
             val result = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
             result.user?.let {
+                // Create user with default USER role
+                val user = User(
+                    id = it.uid,
+                    email = email,
+                    role = UserRole.USER
+                )
+                firebaseDb.collection("users").document(it.uid).set(user).await()
+                Log.d("AuthRepositoryImpl", "User created successfully")
                 Result.success(it)
             } ?: Result.failure(Exception("User creation failed"))
         } catch (e: Exception) {

@@ -31,11 +31,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -45,14 +47,24 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.sukuna.animestudio.R
+import com.sukuna.animestudio.domain.RoleManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToProfile: () -> Unit
+    onNavigateToProfile: () -> Unit,
+    onNavigateToAdminPanel: () -> Unit,
+    viewModel: HomeViewModel = hiltViewModel(),
+    roleManager: RoleManager
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    val uiState by viewModel.uiState.collectAsState()
+    val currentUser by viewModel.currentUser.collectAsState()
+
+    // Use currentUser for real-time updates, fallback to uiState.user
+    val user = currentUser ?: uiState.user
 
     Scaffold(
         topBar = {
@@ -60,10 +72,11 @@ fun HomeScreen(
                 Image(
                     painter = painterResource(id = R.drawable.home_screen_bg),
                     contentDescription = null,
-                    contentScale = ContentScale.FillBounds,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(170.dp) // ⬅️ instead of matchParentSize()
+                        .height(170.dp),
+                    alignment = BiasAlignment(horizontalBias = 0f, verticalBias = -1.5f)
                 )
                 LargeTopAppBar(
                     title = {
@@ -89,6 +102,16 @@ fun HomeScreen(
                         titleContentColor = MaterialTheme.colorScheme.primary
                     ),
                     actions = {
+                        if (roleManager.isAdmin(user) || roleManager.isModerator(user)) {
+                            IconButton(onClick = onNavigateToAdminPanel) {
+                                Icon(
+                                    painter = painterResource(R.drawable.admin_icon),
+                                    contentDescription = "Admin Panel",
+                                    tint = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
                         IconButton(onClick = onNavigateToProfile) {
                             Icon(
                                 imageVector = Icons.Default.Person,
@@ -100,7 +123,6 @@ fun HomeScreen(
             }
         }
     ) { paddingValues ->
-
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -115,7 +137,6 @@ fun HomeScreen(
                 )
         ) {
             item {
-                // Search Bar
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -140,14 +161,12 @@ fun HomeScreen(
                     )
                 )
 
-                // Featured Section
                 Text(
                     text = "Featured Anime",
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
-                // Featured Anime Cards
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -168,14 +187,12 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Continue Watching Section
                 Text(
                     text = "Continue Watching",
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
-                // Continue Watching List
                 sampleAnimeList.forEach { anime ->
                     Box(modifier = Modifier.fillMaxWidth()) {
                         ContinueWatchingCard(anime = anime)
@@ -274,4 +291,4 @@ private val sampleAnimeList = listOf(
     "Attack on Titan",
     "My Hero Academia",
     "Black Clover"
-) 
+)
