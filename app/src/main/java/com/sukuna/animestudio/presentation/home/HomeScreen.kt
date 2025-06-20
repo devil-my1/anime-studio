@@ -107,6 +107,7 @@ fun HomeScreen(
                                 Icon(
                                     painter = painterResource(R.drawable.admin_icon),
                                     contentDescription = "Admin Panel",
+                                    tint = MaterialTheme.colorScheme.tertiary,
                                     modifier = Modifier.size(24.dp)
                                 )
                             }

@@ -3,18 +3,19 @@ package com.sukuna.animestudio.presentation.admin
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -22,7 +23,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Snackbar
@@ -77,11 +78,14 @@ fun UserManagementDialog(
             tonalElevation = 8.dp,
             modifier = Modifier
                 .fillMaxWidth(0.95f)
-                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.95f)
         ) {
             Column(
-                modifier = Modifier.background(MaterialTheme.colorScheme.background)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
             ) {
+                // Top bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -90,12 +94,13 @@ fun UserManagementDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "User Management",
+                        "User Management",
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.weight(1f)
                     )
                     Button(onClick = onDismiss) { Text("Close") }
                 }
+                // Search
                 OutlinedTextField(
                     value = search,
                     onValueChange = { search = it },
@@ -104,12 +109,14 @@ fun UserManagementDialog(
                         .fillMaxWidth()
                         .padding(16.dp)
                 )
+                // Content
                 when {
                     isLoading -> {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                             CircularProgressIndicator()
                         }
                     }
+
                     error != null -> {
                         Text(
                             error!!,
@@ -117,28 +124,31 @@ fun UserManagementDialog(
                             modifier = Modifier.padding(16.dp)
                         )
                     }
+
                     else -> {
                         val filtered = users.filter {
                             it.username.contains(search, ignoreCase = true) ||
-                                it.email.contains(search, ignoreCase = true)
+                                    it.email.contains(search, ignoreCase = true)
                         }
                         if (filtered.isEmpty()) {
                             Text(
-                                text = "No users found.",
+                                "No users found.",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(16.dp)
                             )
                         } else {
                             LazyColumn(
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.padding(horizontal = 16.dp)
+                                modifier = Modifier.weight(1f)
                             ) {
-                                items(filtered, key = { it.id }) { user ->
+                                items(filtered.size) { index ->
+                                    val user = filtered[index]
                                     UserManagementRow(
                                         user = user,
                                         onRoleChange = { newRole ->
                                             viewModel.updateUserRole(user, newRole) { success ->
-                                                snackbarMessage = if (success) "Role updated." else "Failed to update role."
+                                                snackbarMessage =
+                                                    if (success) "Role updated." else "Failed to update role."
                                             }
                                         },
                                         onDelete = { showDeleteDialog = user }

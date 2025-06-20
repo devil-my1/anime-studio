@@ -1,6 +1,5 @@
 package com.sukuna.animestudio.presentation.admin
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -8,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -22,7 +22,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -50,49 +52,53 @@ fun AnimeCard(
             .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            AsyncImage(
-                model = anime.imageUrl.ifEmpty { R.drawable.ic_launcher_foreground },
-                contentDescription = "Anime Cover",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .background(Color.LightGray, RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop,
-                alignment = Alignment.Center
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Column(modifier = Modifier.weight(1f, fill = false)) {
-                Text(
-                    text = anime.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+            Column {
+                AsyncImage(
+                    model = anime.imageUrl.ifEmpty { R.drawable.ic_launcher_foreground },
+                    contentDescription = "Anime Cover",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.tertiary,
-                                    Color.Transparent
+                        .height(180.dp)
+                        .scale(1.1f)
+                        .background(Color.LightGray, RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop,
+                    alignment = BiasAlignment(horizontalBias = 0f, verticalBias = -0.2f)
+                )
+                Column(modifier = Modifier.weight(1f, fill = false)) {
+                    Text(
+                        text = anime.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.tertiary,
+                                        Color.Transparent
+                                    )
                                 )
                             )
-                        )
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                )
-                Text(
-                    text = anime.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(4.dp)
-                )
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                    Text(
+                        text = anime.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(6.dp)
+                    )
+                }
             }
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .fillMaxWidth()
             ) {
                 Text(
                     text = "Rating: ${anime.rating} ⭐ • Episodes: ${anime.episodesCount}",
@@ -104,14 +110,13 @@ fun AnimeCard(
                         .background(Color.Yellow.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
                         .padding(horizontal = 8.dp, vertical = 2.dp)
                 )
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Anime",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
+
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Anime",
+                        tint = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }

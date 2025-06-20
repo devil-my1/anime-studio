@@ -2,7 +2,7 @@ package com.sukuna.animestudio.presentation.admin
 
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
-import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,10 +12,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -26,21 +27,20 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
@@ -69,10 +69,18 @@ fun AnimeFormDialog(
     var description by rememberSaveable { mutableStateOf(anime?.description ?: "") }
     var imageUrl by rememberSaveable { mutableStateOf(anime?.imageUrl ?: "") }
     var rating by rememberSaveable { mutableStateOf(anime?.rating?.toString() ?: "0.0") }
-    var episodeCount by rememberSaveable { mutableStateOf(anime?.episodesCount?.toString() ?: "12") }
+    var episodeCount by rememberSaveable {
+        mutableStateOf(
+            anime?.episodesCount?.toString() ?: "12"
+        )
+    }
     var showGenreDialog by remember { mutableStateOf(false) }
     val selectedGenres = remember { mutableStateOf(anime?.genre ?: listOf(AnimeGenre.ACTION)) }
-    var selectedStatus by rememberSaveable { mutableStateOf(anime?.animeStatus ?: AnimeStatus.IN_PROGRESS) }
+    var selectedStatus by rememberSaveable {
+        mutableStateOf(
+            anime?.animeStatus ?: AnimeStatus.IN_PROGRESS
+        )
+    }
     var releaseDate by rememberSaveable {
         mutableStateOf(anime?.releaseDate ?: SimpleDateFormat("yyyy-MM-dd").format(Date()))
     }
@@ -92,11 +100,12 @@ fun AnimeFormDialog(
                             Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    selectedGenres.value = if (selectedGenres.value.contains(genre)) {
-                                        selectedGenres.value.filterNot { it == genre }
-                                    } else {
-                                        selectedGenres.value + genre
-                                    }
+                                    selectedGenres.value =
+                                        if (selectedGenres.value.contains(genre)) {
+                                            selectedGenres.value.filterNot { it == genre }
+                                        } else {
+                                            selectedGenres.value + genre
+                                        }
                                 }
                                 .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -126,12 +135,16 @@ fun AnimeFormDialog(
         val currentDate = remember {
             try {
                 df.parse(releaseDate)?.time ?: System.currentTimeMillis()
-            } catch (_: Exception) { System.currentTimeMillis() }
+            } catch (_: Exception) {
+                System.currentTimeMillis()
+            }
         }
         val datePickerDialog = DatePickerDialog(
             context,
             { _, year, month, day ->
-                releaseDate = "$year-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}"
+                releaseDate = "$year-${(month + 1).toString().padStart(2, '0')}-${
+                    day.toString().padStart(2, '0')
+                }"
                 showDatePicker = false
             },
             Calendar.getInstance().apply { timeInMillis = currentDate }.get(Calendar.YEAR),
@@ -172,7 +185,10 @@ fun AnimeFormDialog(
                             label = { Text("Image URL") },
                             modifier = Modifier.fillMaxWidth()
                         )
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             OutlinedTextField(
                                 value = rating,
                                 onValueChange = { rating = it },
@@ -190,8 +206,14 @@ fun AnimeFormDialog(
                             modifier = Modifier
                                 .padding(vertical = 16.dp)
                                 .fillMaxWidth()
-                                .background(Color.LightGray.copy(alpha = 0.3f))
-                                .padding(8.dp)
+                                .padding(vertical = 8.dp)
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f),
+                                    shape = MaterialTheme.shapes.medium
+                                )
+                                .padding(12.dp)
+
                         ) {
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Row(
@@ -206,19 +228,49 @@ fun AnimeFormDialog(
                                         style = MaterialTheme.typography.labelLarge,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                     )
-                                    OutlinedButton(onClick = { showGenreDialog = true }, modifier = Modifier.height(32.dp)) {
-                                        Icon(Icons.Default.Add, contentDescription = "Add Genre", modifier = Modifier.size(16.dp))
+                                    OutlinedButton(
+                                        onClick = { showGenreDialog = true },
+                                        modifier = Modifier.height(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Add,
+                                            contentDescription = "Add Genre",
+                                            tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
+                                            modifier = Modifier.size(16.dp)
+                                        )
                                     }
                                 }
                                 if (selectedGenres.value.isEmpty()) {
-                                    Box(modifier = Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
-                                        Text("No genres selected", style = MaterialTheme.typography.bodyMedium)
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(80.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            "No genres selected",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
                                     }
                                 } else {
-                                    LazyVerticalGrid(columns = GridCells.Fixed(3), modifier = Modifier.height(140.dp)) {
-                                        items(selectedGenres.value) { genre ->
-                                            OutlinedButton(onClick = { selectedGenres.value = selectedGenres.value.filterNot { it == genre } }) {
-                                                Text(genre.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    LazyVerticalGrid(
+                                        columns = GridCells.Fixed(3),
+                                        modifier = Modifier.height(140.dp)
+                                    ) {
+                                        items(selectedGenres.value.size) { index ->
+                                            val genre = selectedGenres.value[index]
+                                            OutlinedButton(onClick = {
+                                                selectedGenres.value =
+                                                    selectedGenres.value.filterNot { it == genre }
+                                            }) {
+                                                Text(
+                                                    genre.name,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    color = MaterialTheme.colorScheme.tertiary.copy(
+                                                        alpha = 0.8f
+                                                    )
+                                                )
                                             }
                                         }
                                     }
@@ -229,16 +281,32 @@ fun AnimeFormDialog(
                             modifier = Modifier
                                 .padding(vertical = 8.dp)
                                 .fillMaxWidth()
-                                .background(Color.LightGray.copy(alpha = 0.3f))
                         ) {
-                            OutlinedButton(onClick = { statusDropdownExpanded = true }) {
+                            OutlinedButton(
+                                onClick = { statusDropdownExpanded = true },
+                                border = _root_ide_package_.androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)
+                                )
+                            ) {
                                 Row {
-                                    Text(selectedStatus.name, modifier = Modifier.weight(1f))
+                                    Text(
+                                        selectedStatus.name,
+                                        modifier = Modifier.weight(1f),
+                                        color = MaterialTheme.colorScheme.tertiary
+                                    )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Select Status", modifier = Modifier.size(20.dp))
+                                    Icon(
+                                        Icons.Default.KeyboardArrowDown,
+                                        contentDescription = "Select Status",
+                                        tint = MaterialTheme.colorScheme.tertiary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
                             }
-                            DropdownMenu(expanded = statusDropdownExpanded, onDismissRequest = { statusDropdownExpanded = false }) {
+                            DropdownMenu(
+                                expanded = statusDropdownExpanded,
+                                onDismissRequest = { statusDropdownExpanded = false }) {
                                 AnimeStatus.entries.forEach { status ->
                                     DropdownMenuItem(text = { Text(status.name) }, onClick = {
                                         selectedStatus = status

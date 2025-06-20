@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
@@ -37,9 +38,11 @@ fun AdminPanelCard(
             .padding(vertical = 4.dp)
             .clickable { onClick() }
             .aspectRatio(1f),
+        elevation = CardDefaults.cardElevation(defaultElevation = 24.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
+
         Column(
             modifier = Modifier
                 .padding(16.dp)
@@ -73,9 +76,11 @@ fun AdminPanelCard(
             Text(
                 description,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.fillMaxSize()
+                textAlign = TextAlign.Center
             )
         }
+
+
     }
 }
 

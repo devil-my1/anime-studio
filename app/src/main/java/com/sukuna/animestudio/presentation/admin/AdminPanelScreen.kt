@@ -1,14 +1,15 @@
 package com.sukuna.animestudio.presentation.admin
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -35,21 +36,28 @@ fun AdminPanelScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Anime Studio (Admin Panel)") },
+                title = { Text("Anime Studio (Admin Panel)", color =
+                MaterialTheme.colorScheme.tertiary.copy(0.8f)) },
                 navigationIcon = {
                     androidx.compose.material3.Icon(
                         painter = painterResource(R.drawable.admin_icon),
                         contentDescription = "Admin Panel",
+                        tint = MaterialTheme.colorScheme.tertiary.copy(
+                            alpha = 0.8f
+                        ),
                         modifier = Modifier
                             .padding(horizontal = 12.dp)
                             .clickable { onBack() }
+                            .size(24.dp)
                     )
                 }
             )
         }
     ) { paddingValues ->
         LazyVerticalGrid(
-            modifier = Modifier.padding(paddingValues).padding(16.dp),
+            modifier = Modifier
+                .padding(paddingValues)
+                .padding(16.dp),
             columns = GridCells.Fixed(2),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
