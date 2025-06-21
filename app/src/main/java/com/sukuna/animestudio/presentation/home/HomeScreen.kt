@@ -245,8 +245,7 @@ private fun HomeContent(
 
         item {
             // Most Favorite Section
-            AnimeSection(
-                title = "Most Favorite",
+            MostFavoriteAnimeSection(
                 animeList = uiState.mostFavoriteAnime,
                 onAnimeClick = onAnimeClick,
                 onAnimeFavoriteToggle = onAnimeFavoriteToggle
@@ -514,6 +513,38 @@ private fun FeaturedAnimeCard(
                     tint = if (anime.isFavorite) Color.Red else Color.White,
                     modifier = Modifier.size(24.dp)
                 )
+            }
+            
+            // Favorite count badge
+            if (anime.favoriteCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                        .background(
+                            color = Color.Red.copy(alpha = 0.9f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Favorite,
+                            contentDescription = "Favorite Count",
+                            tint = Color.White,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = anime.favoriteCount.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
             
             // Title and rating
@@ -833,6 +864,165 @@ private fun NextSeasonCard(
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(top = 4.dp)
                     )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Most Favorite Anime section with special styling
+ */
+@Composable
+private fun MostFavoriteAnimeSection(
+    animeList: List<Anime>,
+    onAnimeClick: (Anime) -> Unit,
+    onAnimeFavoriteToggle: (Anime) -> Unit
+) {
+    Column(
+        modifier = Modifier.padding(vertical = 8.dp)
+    ) {
+        SectionTitle(title = "Most Favorite")
+        
+        LazyRow(
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(animeList) { anime ->
+                MostFavoriteAnimeCard(
+                    anime = anime,
+                    onAnimeClick = onAnimeClick,
+                    onAnimeFavoriteToggle = onAnimeFavoriteToggle
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Most Favorite anime card with special styling
+ */
+@Composable
+private fun MostFavoriteAnimeCard(
+    anime: Anime,
+    onAnimeClick: (Anime) -> Unit,
+    onAnimeFavoriteToggle: (Anime) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .width(280.dp)
+            .height(200.dp)
+            .clickable { onAnimeClick(anime) },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Anime image
+            SimpleAnimeImage(
+                imageUrl = anime.imageUrl,
+                contentDescription = anime.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            
+            // Gradient overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.7f)
+                            )
+                        )
+                    )
+            )
+            
+            // Favorite button
+            IconButton(
+                onClick = { onAnimeFavoriteToggle(anime) },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+            ) {
+                Icon(
+                    imageVector = if (anime.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = "Favorite",
+                    tint = if (anime.isFavorite) Color.Red else Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            
+            // Favorite count badge
+            if (anime.favoriteCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                        .background(
+                            color = Color.Red.copy(alpha = 0.9f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Favorite,
+                            contentDescription = "Favorite Count",
+                            tint = Color.White,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = anime.favoriteCount.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+            
+            // Title and rating
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = anime.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                if (anime.rating > 0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Rating",
+                            tint = Color.Yellow,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = anime.rating.toString(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }

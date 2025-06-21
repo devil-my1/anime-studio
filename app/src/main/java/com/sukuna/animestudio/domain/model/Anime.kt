@@ -13,10 +13,9 @@ data class Anime(
     val episodes: List<Episode> = emptyList(),
     val status: Status = Status.NOT_STARTED,
     val animeStatus: AnimeStatus = AnimeStatus.IN_PROGRESS,
-    val isFavorite: Boolean = false,
-    val isWatched: Boolean = false,
-    val isInWatchlist: Boolean = false,
     val releaseDate: String = "",
+    val isFavorite: Boolean = false,
+    val favoriteCount: Int = 0,
 )
 
 data class Episode(

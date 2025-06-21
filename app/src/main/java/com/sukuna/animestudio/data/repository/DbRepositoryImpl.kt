@@ -56,6 +56,17 @@ class DbRepositoryImpl @Inject constructor(
 
     }
 
+    override suspend fun updateUserFavorites(userId: String, favoriteAnime: List<Anime>): Boolean {
+        return try {
+            // Update only the favoriteAnime field for better performance
+            usersCollection.document(userId).update("favoriteAnime", favoriteAnime).await()
+            true
+        } catch (e: Exception) {
+            Log.e("DbRepositoryImpl", "Error updating user favorites", e)
+            false
+        }
+    }
+
     override suspend fun deleteUser(userId: String): Boolean {
         return try {
             usersCollection.document(userId).delete().await()
@@ -111,6 +122,27 @@ class DbRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Log.e("DbRepositoryImpl", "Error deleting anime", e)
             false
+        }
+    }
+
+    override suspend fun getFavoriteStatistics(): Map<String, Int> {
+        return try {
+            // Get all users and their favorite anime lists
+            val allUsers = getAllUsers()
+            
+            // Count how many users have each anime in their favorites
+            val favoriteCounts = mutableMapOf<String, Int>()
+            
+            allUsers.forEach { user ->
+                user.favoriteAnime.forEach { anime ->
+                    favoriteCounts[anime.id] = favoriteCounts.getOrDefault(anime.id, 0) + 1
+                }
+            }
+            
+            favoriteCounts
+        } catch (e: Exception) {
+            Log.e("DbRepositoryImpl", "Error getting favorite statistics", e)
+            emptyMap()
         }
     }
 
