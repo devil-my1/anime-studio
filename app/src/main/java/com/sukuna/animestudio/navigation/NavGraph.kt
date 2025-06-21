@@ -3,11 +3,14 @@ package com.sukuna.animestudio.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.sukuna.animestudio.domain.RoleManager
 import com.sukuna.animestudio.presentation.admin.AdminPanelScreen
 import com.sukuna.animestudio.presentation.auth.AuthScreen
+import com.sukuna.animestudio.presentation.detail.AnimeDetailScreen
 import com.sukuna.animestudio.presentation.home.HomeScreen
 import com.sukuna.animestudio.presentation.profile.ProfileScreen
 
@@ -16,6 +19,9 @@ sealed class Screen(val route: String) {
     object Home : Screen("home")
     object Profile : Screen("profile")
     object AdminPanel : Screen("admin_panel")
+    object AnimeDetail : Screen("anime_detail/{animeId}") {
+        fun createRoute(animeId: String) = "anime_detail/$animeId"
+    }
 }
 
 @Composable
@@ -46,6 +52,9 @@ fun NavGraph(
                 onNavigateToAdminPanel = {
                     navController.navigate(Screen.AdminPanel.route)
                 },
+                onNavigateToAnimeDetail = { animeId ->
+                    navController.navigate(Screen.AnimeDetail.createRoute(animeId))
+                },
                 roleManager = roleManager
             )
         }
@@ -64,6 +73,19 @@ fun NavGraph(
 
         composable(Screen.AdminPanel.route) {
             AdminPanelScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.AnimeDetail.route,
+            arguments = listOf(
+                navArgument("animeId") {
+                    type = NavType.StringType
+                }
+            )
+        ) {
+            AnimeDetailScreen(
                 onBack = { navController.popBackStack() }
             )
         }

@@ -1,6 +1,7 @@
 package com.sukuna.animestudio.data.repository
 
 import com.sukuna.animestudio.domain.model.Anime
+import com.sukuna.animestudio.domain.model.Episode
 import com.sukuna.animestudio.domain.model.User
 
 interface DbRepository {
@@ -41,6 +42,11 @@ interface DbRepository {
     suspend fun updateAnime(anime: Anime): Boolean
 
     suspend fun deleteAnime(animeId: String): Boolean
+
+    /**
+     * Updates an [Episode] in the database. Returns `true` if the operation succeeds.
+     */
+    suspend fun updateEpisode(userId: String, episode: Episode): Boolean
 
     /**
      * Gets favorite statistics from all users to calculate community favorites.

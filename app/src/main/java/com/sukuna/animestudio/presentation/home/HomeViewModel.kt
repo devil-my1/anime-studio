@@ -184,12 +184,12 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun onAnimeClick(anime: Anime) {
-        // Handle anime click - navigate to detail screen
-        _uiState.update { state ->
-            state.copy(selectedAnime = anime)
-        }
-    }
+//    fun onAnimeClick(anime: Anime) {
+//        // Handle anime click - navigate to detail screen
+//        _uiState.update { state ->
+//            state.copy(selectedAnime = anime)
+//        }
+//    }
 
     /**
      * Toggles the favorite status of an anime and updates both the anime state

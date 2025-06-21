@@ -70,6 +70,7 @@ import com.sukuna.animestudio.presentation.components.SimpleAnimeImage
 fun HomeScreen(
     onNavigateToProfile: () -> Unit,
     onNavigateToAdminPanel: () -> Unit,
+    onNavigateToAnimeDetail: (String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
     roleManager: RoleManager
 ) {
@@ -119,7 +120,10 @@ fun HomeScreen(
                 searchQuery = searchQuery,
                 onSearchQueryChange = { searchQuery = it },
                 uiState = uiState,
-                onAnimeClick = viewModel::onAnimeClick,
+                onAnimeClick = { anime ->
+//                    viewModel.onAnimeClick(anime)
+                    onNavigateToAnimeDetail(anime.id)
+                },
                 onAnimeFavoriteToggle = viewModel::onAnimeFavoriteToggle
             )
         }

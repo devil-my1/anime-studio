@@ -3,6 +3,7 @@ package com.sukuna.animestudio.data.repository
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.sukuna.animestudio.domain.model.Anime
+import com.sukuna.animestudio.domain.model.Episode
 import com.sukuna.animestudio.domain.model.User
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -125,20 +126,31 @@ class DbRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun updateEpisode(userId: String, episode: Episode): Boolean {
+        return try {
+            // Update only the episode field for better performance
+            usersCollection.document(userId).update("episodes.${episode.id}", episode).await()
+            true
+        } catch (e: Exception) {
+            Log.e("DbRepositoryImpl", "Error updating episode", e)
+            false
+        }
+    }
+
     override suspend fun getFavoriteStatistics(): Map<String, Int> {
         return try {
             // Get all users and their favorite anime lists
             val allUsers = getAllUsers()
-            
+
             // Count how many users have each anime in their favorites
             val favoriteCounts = mutableMapOf<String, Int>()
-            
+
             allUsers.forEach { user ->
                 user.favoriteAnime.forEach { anime ->
                     favoriteCounts[anime.id] = favoriteCounts.getOrDefault(anime.id, 0) + 1
                 }
             }
-            
+
             favoriteCounts
         } catch (e: Exception) {
             Log.e("DbRepositoryImpl", "Error getting favorite statistics", e)
