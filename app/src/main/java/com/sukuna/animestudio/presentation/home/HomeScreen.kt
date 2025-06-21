@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -46,7 +47,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -397,10 +397,13 @@ private fun Top10AnimeSection(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(animeList.take(10)) { anime ->
+            itemsIndexed(
+                items = animeList.take(10),
+                key = { _, anime -> anime.id }
+            ) { index, anime ->
                 Top10AnimeCard(
                     anime = anime,
-                    rank = animeList.indexOf(anime) + 1,
+                    rank = index + 1,
                     onAnimeClick = onAnimeClick,
                     onAnimeFavoriteToggle = onAnimeFavoriteToggle
                 )

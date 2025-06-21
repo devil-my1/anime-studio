@@ -113,25 +113,37 @@ class HomeViewModel @Inject constructor(
             // Update favorite status in repository
             // For now, just update local state
             _uiState.update { state ->
+                // First, update the isFavorite property across all lists
+                val updatedFeaturedAnime = state.featuredAnime.map { 
+                    if (it.id == anime.id) it.copy(isFavorite = !it.isFavorite) else it 
+                }
+                val updatedTrendingAnime = state.trendingAnime.map { 
+                    if (it.id == anime.id) it.copy(isFavorite = !it.isFavorite) else it 
+                }
+                val updatedTop10Anime = state.top10Anime.map { 
+                    if (it.id == anime.id) it.copy(isFavorite = !it.isFavorite) else it 
+                }
+                val updatedAllTimePopularAnime = state.allTimePopularAnime.map { 
+                    if (it.id == anime.id) it.copy(isFavorite = !it.isFavorite) else it 
+                }
+                val updatedNextSeasonAnime = state.nextSeasonAnime.map { 
+                    if (it.id == anime.id) it.copy(isFavorite = !it.isFavorite) else it 
+                }
+                
+                // Re-evaluate the mostFavoriteAnime list based on updated favorite status
+                // Combine all anime lists and filter for favorites
+                val allAnime = (updatedFeaturedAnime + updatedTrendingAnime + 
+                               updatedTop10Anime + updatedAllTimePopularAnime + 
+                               updatedNextSeasonAnime).distinctBy { it.id }
+                val updatedMostFavoriteAnime = allAnime.filter { it.isFavorite }
+                
                 state.copy(
-                    featuredAnime = state.featuredAnime.map { 
-                        if (it.id == anime.id) it.copy(isFavorite = !it.isFavorite) else it 
-                    },
-                    trendingAnime = state.trendingAnime.map { 
-                        if (it.id == anime.id) it.copy(isFavorite = !it.isFavorite) else it 
-                    },
-                    mostFavoriteAnime = state.mostFavoriteAnime.map { 
-                        if (it.id == anime.id) it.copy(isFavorite = !it.isFavorite) else it 
-                    },
-                    top10Anime = state.top10Anime.map { 
-                        if (it.id == anime.id) it.copy(isFavorite = !it.isFavorite) else it 
-                    },
-                    allTimePopularAnime = state.allTimePopularAnime.map { 
-                        if (it.id == anime.id) it.copy(isFavorite = !it.isFavorite) else it 
-                    },
-                    nextSeasonAnime = state.nextSeasonAnime.map { 
-                        if (it.id == anime.id) it.copy(isFavorite = !it.isFavorite) else it 
-                    }
+                    featuredAnime = updatedFeaturedAnime,
+                    trendingAnime = updatedTrendingAnime,
+                    mostFavoriteAnime = updatedMostFavoriteAnime,
+                    top10Anime = updatedTop10Anime,
+                    allTimePopularAnime = updatedAllTimePopularAnime,
+                    nextSeasonAnime = updatedNextSeasonAnime
                 )
             }
         }
