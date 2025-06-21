@@ -126,13 +126,42 @@ class DbRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateEpisode(userId: String, episode: Episode): Boolean {
+    override suspend fun updateEpisode(animeId: String, episode: Episode): Boolean {
         return try {
-            // Update only the episode field for better performance
-            usersCollection.document(userId).update("episodes.${episode.id}", episode).await()
-            true
+            // Get the current anime document
+            val animeDoc = animeCollection.document(animeId).get().await()
+            if (animeDoc.exists()) {
+                val anime = animeDoc.toObject(Anime::class.java)
+                if (anime != null) {
+                    // Check if episode already exists
+                    val existingEpisodes = anime.episodes.toMutableList()
+                    val existingIndex = existingEpisodes.indexOfFirst { it.episodeNumber == episode.episodeNumber }
+                    
+                    if (existingIndex != -1) {
+                        // Update existing episode
+                        existingEpisodes[existingIndex] = episode
+                    } else {
+                        // Add new episode
+                        existingEpisodes.add(episode)
+                    }
+                    
+                    // Sort episodes by episode number
+                    val sortedEpisodes = existingEpisodes.sortedBy { it.episodeNumber }
+                    
+                    // Update the anime document with the new episodes list
+                    animeCollection.document(animeId).update("episodes", sortedEpisodes).await()
+                    Log.d("DbRepositoryImpl", "Successfully updated episode ${episode.episodeNumber} for anime $animeId")
+                    true
+                } else {
+                    Log.e("DbRepositoryImpl", "Failed to parse anime document")
+                    false
+                }
+            } else {
+                Log.e("DbRepositoryImpl", "Anime document with id $animeId does not exist")
+                false
+            }
         } catch (e: Exception) {
-            Log.e("DbRepositoryImpl", "Error updating episode", e)
+            Log.e("DbRepositoryImpl", "Error updating episode for anime $animeId", e)
             false
         }
     }

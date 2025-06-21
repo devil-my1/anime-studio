@@ -1,41 +1,33 @@
 package com.sukuna.animestudio.presentation.detail
 
 import android.annotation.SuppressLint
+import androidx.annotation.OptIn
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -43,16 +35,25 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.sukuna.animestudio.R
 import com.sukuna.animestudio.domain.model.Episode
-import kotlin.math.roundToInt
 
 /**
  * Fancy and intuitive media player component with comprehensive controls.
- * Features play/pause, seek functionality, progress tracking, and full-screen toggle.
+ * Features play/pause, seek functionality, progress tracking, full-screen toggle,
+ * and Firebase Storage video integration.
  */
+@OptIn(UnstableApi::class)
+@SuppressLint("RememberReturnType", "ClickableViewAccessibility")
 @Composable
 fun MediaPlayerSection(
     episode: Episode,
@@ -78,10 +79,46 @@ fun MediaPlayerSection(
         label = "progress"
     )
 
+    // ExoPlayer state management
+    var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+    var playerView by remember { mutableStateOf<PlayerView?>(null) }
+
+    // Initialize ExoPlayer when episode changes
+    DisposableEffect(episode.videoUrl) {
+        if (episode.videoUrl.isNotEmpty()) {
+            exoPlayer?.release()
+            exoPlayer = ExoPlayer.Builder(context).build().apply {
+                val mediaItem = MediaItem.fromUri(episode.videoUrl.toUri())
+                setMediaItem(mediaItem)
+                prepare()
+
+                // Add listener for position updates and state changes
+                addListener(object : Player.Listener {
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        // Handle play state changes
+                    }
+
+                    override fun onPositionDiscontinuity(
+                        oldPosition: Player.PositionInfo,
+                        newPosition: Player.PositionInfo,
+                        reason: Int
+                    ) {
+                        // Handle seek events
+                        onSeek(newPosition.positionMs)
+                    }
+                })
+            }
+        }
+
+        onDispose {
+            exoPlayer?.release()
+        }
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(280.dp),
+            .height(if (isFullScreen) 400.dp else 280.dp),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
@@ -90,61 +127,105 @@ fun MediaPlayerSection(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface)
         ) {
-            // Video Preview Area
+            // Video Player Area
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .clickable { onPlayPause() }
             ) {
-                // Episode Thumbnail
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(episode.imageUrl.ifEmpty { "https://via.placeholder.com/400x225" })
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Episode ${episode.episodeNumber}",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                if (episode.videoUrl.isNotEmpty() && exoPlayer != null) {
+                    // ExoPlayer for video playback
+                    AndroidView(
+                        factory = { context ->
+                            PlayerView(context).apply {
+                                player = exoPlayer
+                                playerView = this
 
-                // Play/Pause Overlay
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = if (isPlaying) 0.3f else 0.5f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (!isPlaying) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Play",
-                            modifier = Modifier.size(64.dp),
-                            tint = Color.White
-                        )
+                                // Configure player view for better UX
+                                useController = true
+
+                                // Enable double tap to seek
+                                setOnTouchListener { _, event ->
+                                    // Handle touch events for better UX
+                                    false
+                                }
+
+                                // Handle play/pause based on isPlaying state
+                                if (isPlaying) {
+                                    exoPlayer?.play()
+                                } else {
+                                    exoPlayer?.pause()
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        update = { playerView ->
+                            // Update player state when isPlaying changes
+                            if (isPlaying) {
+                                exoPlayer?.play()
+                            } else {
+                                exoPlayer?.pause()
+                            }
+
+                            // Update player view configuration
+                            playerView?.let { view ->
+                                view.useController = true
+                            }
+                        }
+                    )
+                } else {
+                    // Fallback to episode thumbnail
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(episode.imageUrl.ifEmpty { "https://via.placeholder.com/400x225" })
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Episode ${episode.episodeNumber}",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    // Play/Pause Overlay
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = if (isPlaying) 0.3f else 0.5f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (!isPlaying) {
+                            Icon(
+                                painter = painterResource(R.drawable.play_button_icon),
+                                contentDescription = "Play",
+                                modifier = Modifier.size(64.dp),
+                                tint = Color.White
+                            )
+                        }
                     }
                 }
 
-                // Episode Info Overlay
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(16.dp)
-                ) {
-                    Text(
-                        text = "Episode ${episode.episodeNumber}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    if (episode.title.isNotEmpty()) {
+                // Episode Info Overlay (only show when not in full-screen mode)
+                if (!isFullScreen) {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(16.dp)
+                    ) {
                         Text(
-                            text = episode.title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.9f),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            text = "Episode ${episode.episodeNumber}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
+                        if (episode.title.isNotEmpty()) {
+                            Text(
+                                text = episode.title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.9f),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
 
@@ -169,191 +250,29 @@ fun MediaPlayerSection(
                         modifier = Modifier.size(24.dp)
                     )
                 }
-            }
 
-            // Controls Section
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                // Progress Bar
-                ProgressBar(
-                    progress = animatedProgress,
-                    onSeek = { seekPosition ->
-                        val newPosition =
-                            (seekPosition * episode.duration * 60 * 1000).roundToInt().toLong()
-                        onSeek(newPosition)
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Control Buttons and Time Display
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Time Display
-                    Text(
-                        text = formatTime(currentPosition, episode.duration * 60 * 1000L),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    // Control Buttons
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                // Back button for full-screen mode
+                if (isFullScreen) {
+                    IconButton(
+                        onClick = onFullScreenToggle,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp)
+                            .size(40.dp)
+                            .background(
+                                Color.Black.copy(alpha = 0.6f),
+                                RoundedCornerShape(8.dp)
+                            )
                     ) {
-                        // Previous Episode Button
-                        IconButton(
-                            onClick = { /* TODO: Navigate to previous episode */ },
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.next),
-                                contentDescription = "Previous Episode",
-                                modifier = Modifier.rotate(180f),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        // Play/Pause Button
-                        FloatingActionButton(
-                            onClick = onPlayPause,
-                            modifier = Modifier.size(56.dp),
-                            containerColor = MaterialTheme.colorScheme.primary
-                        ) {
-                            Icon(
-                                painter = if (isPlaying) painterResource(R.drawable.pause_button_icon) else painterResource(
-                                    R.drawable.play_button_icon
-                                ),
-                                contentDescription = if (isPlaying) "Pause" else "Play",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-
-                        // Next Episode Button
-                        IconButton(
-                            onClick = { /* TODO: Navigate to next episode */ },
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.next),
-                                contentDescription = "Next Episode",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-
-                    // Volume and Settings
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = { /* TODO: Volume control */ },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.sound),
-                                contentDescription = "Volume",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        IconButton(
-                            onClick = { /* TODO: Settings menu */ },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "Settings",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                        Icon(
+                            painter = painterResource(R.drawable.arrow_back_icon),
+                            contentDescription = "Exit Full Screen",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }
         }
     }
-}
-
-/**
- * Custom progress bar with seek functionality.
- */
-@Composable
-private fun ProgressBar(
-    progress: Float,
-    onSeek: (Float) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var isDragging by remember { mutableStateOf(false) }
-
-    Column(modifier = modifier) {
-        // Progress Bar Track
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(4.dp)
-                .background(
-                    MaterialTheme.colorScheme.surfaceVariant,
-                    RoundedCornerShape(2.dp)
-                )
-                .clickable {
-                    // Calculate seek position based on click offset
-                    // This is a simplified implementation
-                    onSeek(progress)
-                }
-        ) {
-            // Progress Bar Fill
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(progress)
-                    .background(
-                        MaterialTheme.colorScheme.primary,
-                        RoundedCornerShape(2.dp)
-                    )
-            )
-
-            // Progress Thumb
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .offset(x = (progress * 100).coerceIn(0f, 100f).dp)
-                    .size(16.dp)
-                    .background(
-                        MaterialTheme.colorScheme.primary,
-                        RoundedCornerShape(8.dp)
-                    )
-            )
-        }
-    }
-}
-
-/**
- * Formats time in MM:SS format for display.
- */
-@SuppressLint("DefaultLocale")
-private fun formatTime(currentPosition: Long, totalDuration: Long): String {
-    val currentMinutes = (currentPosition / 60000).toInt()
-    val currentSeconds = ((currentPosition % 60000) / 1000).toInt()
-
-    val totalMinutes = (totalDuration / 60000).toInt()
-    val totalSeconds = ((totalDuration % 60000) / 1000).toInt()
-
-    return String.format(
-        "%02d:%02d / %02d:%02d",
-        currentMinutes,
-        currentSeconds,
-        totalMinutes,
-        totalSeconds
-    )
 } 

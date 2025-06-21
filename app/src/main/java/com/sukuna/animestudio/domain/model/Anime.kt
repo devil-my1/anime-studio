@@ -25,6 +25,7 @@ data class Episode(
     val episodeNumber: Int = 1,
     val animeId: String = "",
     val imageUrl: String = "",
+    val videoUrl: String = "",
     val duration: Int = 24, // in minutes
     val isWatched: Boolean = false,
 )

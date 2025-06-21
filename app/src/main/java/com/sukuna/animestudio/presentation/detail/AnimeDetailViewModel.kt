@@ -1,10 +1,12 @@
 package com.sukuna.animestudio.presentation.detail
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sukuna.animestudio.data.repository.AuthRepository
 import com.sukuna.animestudio.data.repository.DbRepository
+import com.sukuna.animestudio.data.repository.StorageRepository
 import com.sukuna.animestudio.domain.UserManager
 import com.sukuna.animestudio.domain.model.Anime
 import com.sukuna.animestudio.domain.model.Episode
@@ -19,14 +21,15 @@ import javax.inject.Inject
 
 /**
  * ViewModel for managing the Anime Detail Screen state and business logic.
- * Handles anime data loading, episode selection, and media player state management.
- * Also manages user's watching state and updates the database accordingly.
+ * Handles anime data loading, episode selection, media player state management,
+ * and Firebase Storage integration for video content.
  */
 @HiltViewModel
 class AnimeDetailViewModel @Inject constructor(
     private val dbRepository: DbRepository,
     private val authRepository: AuthRepository,
     private val userManager: UserManager,
+    private val storageRepository: StorageRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -44,22 +47,43 @@ class AnimeDetailViewModel @Inject constructor(
     val currentUser: StateFlow<User?> = userManager.currentUser
 
     init {
-        loadAnimeDetails()
+        loadAnimeDetailsInternal()
     }
 
     /**
      * Loads the detailed anime information and episodes from the database.
+     * Also fetches episodes from Firebase Storage if available and saves them to database.
      * Handles loading states and error scenarios gracefully.
      */
     private fun loadAnimeDetailsInternal() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
+                // First, load anime details from database
                 val anime = dbRepository.getAnimeById(animeId)
                 if (anime != null) {
+                    // Try to fetch episodes from Firebase Storage
+                    val storageEpisodesResult = storageRepository.getAnimeEpisodes(animeId)
+                    
+                    val updatedAnime = if (storageEpisodesResult.isSuccess) {
+                        val storageEpisodes = storageEpisodesResult.getOrNull() ?: emptyList()
+                        
+                        // Save new episodes from storage to database
+                        saveStorageEpisodesToDatabase(anime, storageEpisodes)
+                        
+                        // Merge database episodes with storage episodes
+                        val mergedEpisodes = mergeEpisodes(anime.episodes, storageEpisodes)
+                        
+                        anime.copy(episodes = mergedEpisodes)
+                    } else {
+                        // If Firebase Storage fails, use database episodes
+                        Log.w("AnimeDetailViewModel", "Failed to fetch episodes from storage: ${storageEpisodesResult.exceptionOrNull()?.message}")
+                        anime
+                    }
+                    
                     _uiState.update { state ->
                         state.copy(
-                            anime = anime,
+                            anime = updatedAnime,
                             isLoading = false,
                             error = null
                         )
@@ -83,8 +107,48 @@ class AnimeDetailViewModel @Inject constructor(
         }
     }
 
-    init {
-        loadAnimeDetailsInternal()
+    /**
+     * Saves episodes found in Firebase Storage to the database.
+     * Only saves episodes that don't already exist in the database.
+     */
+    private suspend fun saveStorageEpisodesToDatabase(anime: Anime, storageEpisodes: List<Episode>) {
+        try {
+            val existingEpisodeNumbers = anime.episodes.map { it.episodeNumber }.toSet()
+            val newEpisodes = storageEpisodes.filter { !existingEpisodeNumbers.contains(it.episodeNumber) }
+            
+            if (newEpisodes.isNotEmpty()) {
+                Log.d("AnimeDetailViewModel", "Found ${newEpisodes.size} new episodes in storage to save to database")
+                
+                // Save each new episode to the database
+                newEpisodes.forEach { episode ->
+                    try {
+                        val success = dbRepository.updateEpisode(animeId, episode)
+                        if (success) {
+                            Log.d("AnimeDetailViewModel", "Successfully saved episode ${episode.episodeNumber} to database")
+                        } else {
+                            Log.w("AnimeDetailViewModel", "Failed to save episode ${episode.episodeNumber} to database")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("AnimeDetailViewModel", "Error saving episode ${episode.episodeNumber} to database: ${e.message}")
+                    }
+                }
+                
+                // Update the anime in the database with the new episodes
+                val updatedEpisodes = anime.episodes + newEpisodes
+                val updatedAnime = anime.copy(episodes = updatedEpisodes.sortedBy { it.episodeNumber })
+                
+                val animeUpdateSuccess = dbRepository.updateAnime(updatedAnime)
+                if (animeUpdateSuccess) {
+                    Log.d("AnimeDetailViewModel", "Successfully updated anime with ${newEpisodes.size} new episodes")
+                } else {
+                    Log.w("AnimeDetailViewModel", "Failed to update anime with new episodes")
+                }
+            } else {
+                Log.d("AnimeDetailViewModel", "No new episodes found in storage to save")
+            }
+        } catch (e: Exception) {
+            Log.e("AnimeDetailViewModel", "Error saving storage episodes to database: ${e.message}")
+        }
     }
 
     /**
@@ -95,8 +159,54 @@ class AnimeDetailViewModel @Inject constructor(
     }
 
     /**
+     * Merges database episodes with Firebase Storage episodes.
+     * Prioritizes storage episodes for video URLs while preserving database metadata.
+     */
+    private fun mergeEpisodes(dbEpisodes: List<Episode>, storageEpisodes: List<Episode>): List<Episode> {
+        val mergedEpisodes = mutableListOf<Episode>()
+        
+        // Create a map of storage episodes by episode number for quick lookup
+        val storageEpisodesMap = storageEpisodes.associateBy { it.episodeNumber }
+        
+        // Process database episodes and merge with storage data
+        dbEpisodes.forEach { dbEpisode ->
+            val storageEpisode = storageEpisodesMap[dbEpisode.episodeNumber]
+            
+            val mergedEpisode = if (storageEpisode != null) {
+                // Merge database metadata with storage video URL
+                dbEpisode.copy(
+                    videoUrl = storageEpisode.videoUrl,
+                    // Keep other database fields (title, description, isWatched, etc.)
+                )
+            } else {
+                // Keep database episode as is
+                dbEpisode
+            }
+            
+            mergedEpisodes.add(mergedEpisode)
+        }
+        
+        // Add any storage episodes that don't exist in database
+        storageEpisodes.forEach { storageEpisode ->
+            val existsInDb = dbEpisodes.any { it.episodeNumber == storageEpisode.episodeNumber }
+            if (!existsInDb) {
+                // Add storage episode to merged list
+                mergedEpisodes.add(storageEpisode)
+                Log.d("AnimeDetailViewModel", "Added storage episode ${storageEpisode.episodeNumber} that wasn't in database")
+            }
+        }
+        
+        // Sort by episode number
+        val sortedEpisodes = mergedEpisodes.sortedBy { it.episodeNumber }
+        Log.d("AnimeDetailViewModel", "Merged ${dbEpisodes.size} DB episodes with ${storageEpisodes.size} storage episodes. Total: ${sortedEpisodes.size}")
+        
+        return sortedEpisodes
+    }
+
+    /**
      * Selects an episode and prepares the media player for playback.
      * Also adds the anime to the user's watching list if not already present.
+     * Fetches video URL from Firebase Storage if not already available.
      * @param episode The episode to be selected and played
      */
     fun selectEpisode(episode: Episode) {
@@ -129,16 +239,37 @@ class AnimeDetailViewModel @Inject constructor(
                     }
                 }
                 
+                // Check if episode has video URL, if not try to fetch from storage
+                var updatedEpisode = episode
+                if (episode.videoUrl.isEmpty()) {
+                    val videoUrlResult = storageRepository.getEpisodeVideoUrl(animeId, episode.episodeNumber)
+                    if (videoUrlResult.isSuccess) {
+                        updatedEpisode = episode.copy(videoUrl = videoUrlResult.getOrNull() ?: "")
+                        
+                        // Update the episode in the anime's episode list
+                        _uiState.update { state ->
+                            val updatedEpisodes = state.anime?.episodes?.map { 
+                                if (it.id == episode.id) updatedEpisode else it 
+                            } ?: emptyList()
+                            
+                            state.copy(
+                                anime = state.anime?.copy(episodes = updatedEpisodes)
+                            )
+                        }
+                    }
+                }
+                
                 // Update UI state
                 _uiState.update { state ->
                     state.copy(
-                        selectedEpisode = episode,
+                        selectedEpisode = updatedEpisode,
                         isPlaying = false,
                         currentPosition = 0L,
                         isFullScreen = false
                     )
                 }
             } catch (e: Exception) {
+                Log.e("AnimeDetailViewModel", "Error selecting episode: ${e.message}")
                 // Handle error silently or show a toast
             }
         }
@@ -238,6 +369,7 @@ class AnimeDetailViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
+                Log.e("AnimeDetailViewModel", "Error marking episode as watched: ${e.message}")
                 // Handle error silently or show a toast
             }
         }
@@ -286,6 +418,7 @@ class AnimeDetailViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                Log.e("AnimeDetailViewModel", "Error toggling favorite: ${e.message}")
                 // Handle error silently or show a toast
             }
         }
@@ -324,6 +457,7 @@ class AnimeDetailViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                Log.e("AnimeDetailViewModel", "Error dropping anime: ${e.message}")
                 // Handle error silently or show a toast
             }
         }
@@ -361,6 +495,7 @@ class AnimeDetailViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                Log.e("AnimeDetailViewModel", "Error adding to watchlist: ${e.message}")
                 // Handle error silently or show a toast
             }
         }

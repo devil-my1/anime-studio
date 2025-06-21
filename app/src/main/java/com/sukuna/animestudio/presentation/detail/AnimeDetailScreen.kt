@@ -88,49 +88,52 @@ fun AnimeDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = uiState.anime?.title ?: "Anime Details",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+            // Hide top app bar when in full-screen mode
+            if (!uiState.isFullScreen) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = uiState.anime?.title ?: "Anime Details",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    },
+                    actions = {
+                        // User Status Chip
+                        if (currentUser != null && uiState.anime != null) {
+                            UserStatusChip(
+                                status = userAnimeStatus,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                        }
+                        
+                        // Favorite button
+                        IconButton(onClick = { viewModel.toggleFavorite() }) {
+                            Icon(
+                                imageVector = if (currentUser?.favoriteAnime?.any { it.id == uiState.anime?.id } == true) {
+                                    Icons.Default.Favorite
+                                } else {
+                                    Icons.Default.FavoriteBorder
+                                },
+                                contentDescription = "Toggle Favorite",
+                                tint = if (currentUser?.favoriteAnime?.any { it.id == uiState.anime?.id } == true) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                }
+                            )
+                        }
                     }
-                },
-                actions = {
-                    // User Status Chip
-                    if (currentUser != null && uiState.anime != null) {
-                        UserStatusChip(
-                            status = userAnimeStatus,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                    }
-
-                    // Favorite button
-                    IconButton(onClick = { viewModel.toggleFavorite() }) {
-                        Icon(
-                            imageVector = if (currentUser?.favoriteAnime?.any { it.id == uiState.anime?.id } == true) {
-                                Icons.Default.Favorite
-                            } else {
-                                Icons.Default.FavoriteBorder
-                            },
-                            contentDescription = "Toggle Favorite",
-                            tint = if (currentUser?.favoriteAnime?.any { it.id == uiState.anime?.id } == true) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            }
-                        )
-                    }
-                }
-            )
+                )
+            }
         }
     ) { paddingValues ->
         when {
@@ -144,7 +147,7 @@ fun AnimeDetailScreen(
                     LoadingIndicator()
                 }
             }
-
+            
             uiState.error != null -> {
                 Box(
                     modifier = Modifier
@@ -175,7 +178,7 @@ fun AnimeDetailScreen(
                     }
                 }
             }
-
+            
             uiState.anime != null -> {
                 LazyColumn(
                     modifier = Modifier
@@ -184,19 +187,21 @@ fun AnimeDetailScreen(
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
                     item {
-                        // Anime Info Section
-                        AnimeInfoSection(
-                            anime = uiState.anime!!,
-                            userStatus = userAnimeStatus,
-                            onAddToWatchlist = { viewModel.addToWatchlist() },
-                            onDropAnime = { viewModel.dropAnime() },
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        // Anime Info Section (hide when in full-screen mode)
+                        if (!uiState.isFullScreen) {
+                            AnimeInfoSection(
+                                anime = uiState.anime!!,
+                                userStatus = userAnimeStatus,
+                                onAddToWatchlist = { viewModel.addToWatchlist() },
+                                onDropAnime = { viewModel.dropAnime() },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
-
+                    
                     item {
                         Spacer(modifier = Modifier.height(24.dp))
-
+                        
                         // Media Player Section (if episode is selected)
                         if (uiState.selectedEpisode != null) {
                             MediaPlayerSection(
@@ -212,32 +217,35 @@ fun AnimeDetailScreen(
                             Spacer(modifier = Modifier.height(24.dp))
                         }
                     }
-
-                    item {
-                        // Episodes Section Header
-                        Text(
-                            text = "Episodes (${uiState.anime!!.episodes.size})",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
-                    // Episodes List
-                    items(
-                        items = uiState.anime!!.episodes.sortedBy { it.episodeNumber },
-                        key = { it.id }
-                    ) { episode ->
-                        EpisodeItem(
-                            episode = episode,
-                            isSelected = uiState.selectedEpisode?.id == episode.id,
-                            onEpisodeClick = { viewModel.selectEpisode(episode) },
-                            onMarkWatched = { viewModel.markEpisodeAsWatched(episode) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
+                    
+                    // Hide episodes list when in full-screen mode
+                    if (!uiState.isFullScreen) {
+                        item {
+                            // Episodes Section Header
+                            Text(
+                                text = "Episodes (${uiState.anime!!.episodes.size})",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                        
+                        // Episodes List
+                        items(
+                            items = uiState.anime!!.episodes.sortedBy { it.episodeNumber },
+                            key = { it.id }
+                        ) { episode ->
+                            EpisodeItem(
+                                episode = episode,
+                                isSelected = uiState.selectedEpisode?.id == episode.id,
+                                onEpisodeClick = { viewModel.selectEpisode(episode) },
+                                onMarkWatched = { viewModel.markEpisodeAsWatched(episode) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                        }
                     }
                 }
             }

@@ -45,8 +45,9 @@ interface DbRepository {
 
     /**
      * Updates an [Episode] in the database. Returns `true` if the operation succeeds.
+     * Adds the episode to the specified anime if it doesn't exist, or updates it if it does.
      */
-    suspend fun updateEpisode(userId: String, episode: Episode): Boolean
+    suspend fun updateEpisode(animeId: String, episode: Episode): Boolean
 
     /**
      * Gets favorite statistics from all users to calculate community favorites.
