@@ -101,6 +101,18 @@ fun HomeScreen(
                     color = MaterialTheme.colorScheme.primary
                 )
             }
+        } else if (uiState.error != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = uiState.error ?: "",
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
         } else {
             HomeContent(
                 modifier = Modifier.padding(paddingValues),
