@@ -23,6 +23,16 @@ class UserManager @Inject constructor() {
         }
     }
 
+    /**
+     * Updates the user's favorite anime list and notifies all observers
+     * @param favoriteAnime The updated list of favorite anime
+     */
+    fun updateUserFavorites(favoriteAnime: List<com.sukuna.animestudio.domain.model.Anime>) {
+        _currentUser.update { user ->
+            user?.copy(favoriteAnime = favoriteAnime)
+        }
+    }
+
     fun clearUser() {
         _currentUser.value = null
     }

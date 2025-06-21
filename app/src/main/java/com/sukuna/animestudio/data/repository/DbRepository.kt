@@ -19,6 +19,12 @@ interface DbRepository {
     suspend fun updateUser(user: User): Boolean
 
     /**
+     * Updates only the favorite anime list for a user. Returns `true` if the operation succeeds.
+     * This is more efficient than updating the entire user object.
+     */
+    suspend fun updateUserFavorites(userId: String, favoriteAnime: List<Anime>): Boolean
+
+    /**
      * Deletes the user with [userId]. Returns `true` when the document has been
      * removed successfully.
      */
@@ -35,4 +41,10 @@ interface DbRepository {
     suspend fun updateAnime(anime: Anime): Boolean
 
     suspend fun deleteAnime(animeId: String): Boolean
+
+    /**
+     * Gets favorite statistics from all users to calculate community favorites.
+     * Returns a map of anime ID to the number of users who have favorited it.
+     */
+    suspend fun getFavoriteStatistics(): Map<String, Int>
 }
