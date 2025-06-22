@@ -272,14 +272,18 @@ internal fun FullScreenPlayerContent(
             AndroidView(
                 factory = {
                     PlayerView(it).apply {
+                        // Attach the shared ExoPlayer instance
                         player = exoPlayer
                         useController = false
-                        setOnTouchListener { _, _ -> true }
+                        // Allow Compose to receive touch events so tapping on
+                        // the overlay properly toggles the controls
                     }
                 },
                 modifier = Modifier.fillMaxSize(),
                 update = {
+                    // Keep playback state and position when switching layouts
                     if (isPlaying) exoPlayer.play() else exoPlayer.pause()
+                    exoPlayer.seekTo(currentPosition)
                 }
             )
         } else {
@@ -484,13 +488,18 @@ internal fun FancyPlayerContent(
                 AndroidView(
                     factory = {
                         PlayerView(it).apply {
+                            // Attach the same player so playback continues
                             player = exoPlayer
                             useController = false
-                            setOnTouchListener { _, _ -> true }
+                            // Do not intercept touch events here; Compose
+                            // handles gestures for showing controls
                         }
                     },
                     modifier = Modifier.fillMaxSize(),
-                    update = { if (isPlaying) exoPlayer?.play() else exoPlayer?.pause() }
+                    update = {
+                        if (isPlaying) exoPlayer?.play() else exoPlayer?.pause()
+                        exoPlayer?.seekTo(currentPosition)
+                    }
                 )
             } else {
                 AsyncImage(
@@ -701,22 +710,23 @@ private fun FancyProgressBar(
                 )
                 .pointerInput(Unit) {
                     detectDragGestures(
-                        onDragStart = {
-                            isDragging = true
-                        },
+                        onDragStart = { isDragging = true },
                         onDragEnd = {
                             isDragging = false
                             onSeek(dragProgress)
                         },
-                        onDrag = { _, dragAmount ->
-                            val newProgress =
-                                (dragProgress + dragAmount.x / size.width).coerceIn(0f, 1f)
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            val newProgress = (dragProgress + dragAmount.x / size.width).coerceIn(0f, 1f)
                             dragProgress = newProgress
                         }
                     )
                 }
-                .clickable {
-                    onSeek(progress)
+                .pointerInput(Unit) {
+                    detectTapGestures { offset ->
+                        val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                        onSeek(newProgress)
+                    }
                 }
         ) {
             Box(
@@ -786,6 +796,19 @@ private fun FancyVolumeControl(
                         Color.White.copy(alpha = 0.3f),
                         RoundedCornerShape(2.dp)
                     )
+                    .pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            val newVol = (volume - dragAmount.y / size.height).coerceIn(0f, 1f)
+                            onVolumeChange(newVol)
+                        }
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures { offset ->
+                            val newVol = (1f - offset.y / size.height).coerceIn(0f, 1f)
+                            onVolumeChange(newVol)
+                        }
+                    }
             ) {
                 Box(
                     modifier = Modifier
