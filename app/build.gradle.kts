@@ -75,9 +75,10 @@ dependencies {
     implementation(libs.coil)
 
     // ExoPlayer for video playback
-    implementation("androidx.media3:media3-exoplayer:1.2.1")
-    implementation("androidx.media3:media3-ui:1.2.1")
-    implementation("androidx.media3:media3-common:1.2.1")
+    implementation("androidx.media3:media3-exoplayer:1.7.1")
+    implementation("androidx.media3:media3-ui:1.7.1")
+    implementation("androidx.media3:media3-common:1.7.1")
+    implementation("androidx.media3:media3-session:1.7.1")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -87,6 +88,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

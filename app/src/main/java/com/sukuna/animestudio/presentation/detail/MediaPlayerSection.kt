@@ -6,37 +6,64 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -46,44 +73,69 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.sukuna.animestudio.R
 import com.sukuna.animestudio.domain.model.Episode
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 /**
- * Fancy and intuitive media player component with comprehensive controls.
- * Features play/pause, seek functionality, progress tracking, full-screen toggle,
- * and Firebase Storage video integration.
+ * Ultra-fancy and beautiful media player with custom Compose overlay.
+ * Features stunning animations, gesture controls, glassmorphism effects,
+ * and perfect full-screen experience.
  */
 @OptIn(UnstableApi::class)
-@SuppressLint("RememberReturnType", "ClickableViewAccessibility")
+@SuppressLint("RememberReturnType", "ClickableViewAccessibility", "ContextCastToActivity")
 @Composable
 fun MediaPlayerSection(
     episode: Episode,
     isPlaying: Boolean,
     currentPosition: Long,
     isFullScreen: Boolean,
+    showControls: Boolean,
+    doubleTapSide: DoubleTapSide?,
+    volume: Float,
     onPlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
     onFullScreenToggle: () -> Unit,
+    onShowControlsChange: (Boolean) -> Unit,
+    onDoubleTapSideChange: (DoubleTapSide?) -> Unit,
+    onVolumeChange: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    // Calculate progress percentage for the seek bar
+    var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+
+    LaunchedEffect(doubleTapSide) {
+        if (doubleTapSide != null) {
+            delay(1000)
+            onDoubleTapSideChange(null)
+        }
+    }
+
+    LaunchedEffect(showControls) {
+        if (showControls && isPlaying) {
+            delay(3000)
+            onShowControlsChange(false)
+        }
+    }
+
     val progress = if (episode.duration > 0) {
         (currentPosition / (episode.duration * 60 * 1000f)).coerceIn(0f, 1f)
     } else 0f
 
-    // Animate progress bar for smooth transitions
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress,
-        animationSpec = tween(durationMillis = 300),
-        label = "progress"
+    val controlsAlpha by animateFloatAsState(
+        targetValue = if (showControls) 1f else 0f,
+        animationSpec = tween(300),
+        label = "controls"
     )
 
-    // ExoPlayer state management
-    var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
-    var playerView by remember { mutableStateOf<PlayerView?>(null) }
+    val doubleTapScale by animateFloatAsState(
+        targetValue = if (doubleTapSide != null) 1.2f else 0f,
+        animationSpec = tween(300),
+        label = "doubleTap"
+    )
 
-    // Initialize ExoPlayer when episode changes
     DisposableEffect(episode.videoUrl) {
         if (episode.videoUrl.isNotEmpty()) {
             exoPlayer?.release()
@@ -91,188 +143,682 @@ fun MediaPlayerSection(
                 val mediaItem = MediaItem.fromUri(episode.videoUrl.toUri())
                 setMediaItem(mediaItem)
                 prepare()
-
-                // Add listener for position updates and state changes
                 addListener(object : Player.Listener {
-                    override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        // Handle play state changes
-                    }
-
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {}
                     override fun onPositionDiscontinuity(
                         oldPosition: Player.PositionInfo,
                         newPosition: Player.PositionInfo,
                         reason: Int
                     ) {
-                        // Handle seek events
                         onSeek(newPosition.positionMs)
                     }
                 })
             }
         }
-
         onDispose {
             exoPlayer?.release()
         }
     }
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(if (isFullScreen) 400.dp else 280.dp),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    if (isFullScreen) {
+        FullScreenPlayerContent(
+            episode = episode,
+            exoPlayer = exoPlayer,
+            isPlaying = isPlaying,
+            currentPosition = currentPosition,
+            progress = progress,
+            showControls = showControls,
+            controlsAlpha = controlsAlpha,
+            doubleTapScale = doubleTapScale,
+            doubleTapSide = doubleTapSide,
+            volume = volume,
+            onPlayPause = onPlayPause,
+            onSeek = onSeek,
+            onFullScreenToggle = onFullScreenToggle,
+            onShowControls = onShowControlsChange,
+            onDoubleTapSide = onDoubleTapSideChange,
+            onVolumeChange = onVolumeChange,
+        )
+    } else {
+        Card(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(280.dp),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            FancyPlayerContent(
+                episode = episode,
+                exoPlayer = exoPlayer,
+                isPlaying = isPlaying,
+                currentPosition = currentPosition,
+                progress = progress,
+                showControls = showControls,
+                controlsAlpha = controlsAlpha,
+                doubleTapScale = doubleTapScale,
+                doubleTapSide = doubleTapSide,
+                volume = volume,
+                onPlayPause = onPlayPause,
+                onSeek = onSeek,
+                onFullScreenToggle = onFullScreenToggle,
+                onShowControls = onShowControlsChange,
+                onDoubleTapSide = onDoubleTapSideChange,
+                onVolumeChange = onVolumeChange,
+                isFullScreen = false
+            )
+        }
+    }
+}
+
+@SuppressLint("ClickableViewAccessibility")
+@Composable
+internal fun FullScreenPlayerContent(
+    episode: Episode,
+    exoPlayer: ExoPlayer?,
+    isPlaying: Boolean,
+    currentPosition: Long,
+    progress: Float,
+    showControls: Boolean,
+    controlsAlpha: Float,
+    doubleTapScale: Float,
+    doubleTapSide: DoubleTapSide?,
+    volume: Float,
+    onPlayPause: () -> Unit,
+    onSeek: (Long) -> Unit,
+    onFullScreenToggle: () -> Unit,
+    onShowControls: (Boolean) -> Unit,
+    onDoubleTapSide: (DoubleTapSide?) -> Unit,
+    onVolumeChange: (Float) -> Unit
+) {
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        val activity = context as? android.app.Activity
+        val window = activity?.window
+        if (window != null) {
+            val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+            insetsController.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            insetsController.hide(WindowInsetsCompat.Type.systemBars())
+            onDispose {
+                insetsController.show(WindowInsetsCompat.Type.systemBars())
+            }
+        } else {
+            onDispose {}
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        onShowControls(!showControls)
+                    },
+                    onDoubleTap = { offset ->
+                        val side =
+                            if (offset.x < size.width / 2) DoubleTapSide.LEFT else DoubleTapSide.RIGHT
+                        onDoubleTapSide(side)
+                        val seekAmount = if (side == DoubleTapSide.RIGHT) 10000L else -10000L
+                        val newPosition = (currentPosition + seekAmount).coerceAtLeast(0L)
+                        onSeek(newPosition)
+                        exoPlayer?.seekTo(newPosition)
+                    }
+                )
+            }
     ) {
-        Column(
+        if (episode.videoUrl.isNotEmpty() && exoPlayer != null) {
+            AndroidView(
+                factory = {
+                    PlayerView(it).apply {
+                        player = exoPlayer
+                        useController = false
+                        setOnTouchListener { _, _ -> true }
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
+                update = {
+                    if (isPlaying) exoPlayer.play() else exoPlayer.pause()
+                }
+            )
+        } else {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(episode.imageUrl.ifEmpty { "https://via.placeholder.com/1920x1080" })
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "Episode ${episode.episodeNumber}",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
-        ) {
-            // Video Player Area
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.3f),
+                            Color.Black.copy(alpha = 0.7f)
+                        )
+                    )
+                )
+        )
+
+        if (doubleTapSide != null) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .clickable { onPlayPause() }
+                    .fillMaxSize()
+                    .padding(32.dp),
+                contentAlignment = if (doubleTapSide == DoubleTapSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd
             ) {
-                if (episode.videoUrl.isNotEmpty() && exoPlayer != null) {
-                    // ExoPlayer for video playback
-                    AndroidView(
-                        factory = { context ->
-                            PlayerView(context).apply {
-                                player = exoPlayer
-                                playerView = this
-
-                                // Configure player view for better UX
-                                useController = true
-
-                                // Enable double tap to seek
-                                setOnTouchListener { _, event ->
-                                    // Handle touch events for better UX
-                                    false
-                                }
-
-                                // Handle play/pause based on isPlaying state
-                                if (isPlaying) {
-                                    exoPlayer?.play()
-                                } else {
-                                    exoPlayer?.pause()
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                        update = { playerView ->
-                            // Update player state when isPlaying changes
-                            if (isPlaying) {
-                                exoPlayer?.play()
-                            } else {
-                                exoPlayer?.pause()
-                            }
-
-                            // Update player view configuration
-                            playerView?.let { view ->
-                                view.useController = true
-                            }
-                        }
-                    )
-                } else {
-                    // Fallback to episode thumbnail
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(episode.imageUrl.ifEmpty { "https://via.placeholder.com/400x225" })
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Episode ${episode.episodeNumber}",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-
-                    // Play/Pause Overlay
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = if (isPlaying) 0.3f else 0.5f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (!isPlaying) {
-                            Icon(
-                                painter = painterResource(R.drawable.play_button_icon),
-                                contentDescription = "Play",
-                                modifier = Modifier.size(64.dp),
-                                tint = Color.White
-                            )
-                        }
-                    }
-                }
-
-                // Episode Info Overlay (only show when not in full-screen mode)
-                if (!isFullScreen) {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Episode ${episode.episodeNumber}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        if (episode.title.isNotEmpty()) {
-                            Text(
-                                text = episode.title,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.9f),
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-
-                // Full Screen Button
-                IconButton(
-                    onClick = onFullScreenToggle,
+                Icon(
+                    painter = if (doubleTapSide == DoubleTapSide.LEFT) painterResource(R.drawable.rewind_icon) else painterResource(
+                        R.drawable.forward_icon
+                    ),
+                    contentDescription = "Seek",
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(40.dp)
-                        .background(
-                            Color.Black.copy(alpha = 0.6f),
-                            RoundedCornerShape(8.dp)
-                        )
-                ) {
-                    Icon(
-                        painter = if (isFullScreen) painterResource(R.drawable.exit_full_screen_icon) else painterResource(
-                            R.drawable.expand
-                        ),
-                        contentDescription = if (isFullScreen) "Exit Full Screen" else "Full Screen",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+                        .size(80.dp)
+                        .scale(doubleTapScale)
+                        .alpha(doubleTapScale),
+                    tint = Color.White
+                )
+            }
+        }
 
-                // Back button for full-screen mode
-                if (isFullScreen) {
-                    IconButton(
-                        onClick = onFullScreenToggle,
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(8.dp)
-                            .size(40.dp)
-                            .background(
-                                Color.Black.copy(alpha = 0.6f),
-                                RoundedCornerShape(8.dp)
-                            )
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.arrow_back_icon),
-                            contentDescription = "Exit Full Screen",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(controlsAlpha)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FancyIconButton(
+                    onClick = onFullScreenToggle,
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Exit Full Screen"
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Episode ${episode.episodeNumber}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    if (episode.title.isNotEmpty()) {
+                        Text(
+                            text = episode.title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.9f),
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                FancyIconButton(
+                    onClick = { /* onShowVolumeControl(!showVolumeControl) */ },
+                    icon = painterResource(R.drawable.sound),
+                    contentDescription = "Volume"
+                )
+            }
+
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                FancyPlayButton(
+                    isPlaying = isPlaying,
+                    onClick = onPlayPause,
+                    modifier = Modifier.size(80.dp)
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                FancyProgressBar(
+                    progress = progress,
+                    onSeek = { seekPosition ->
+                        val newPosition =
+                            (seekPosition * episode.duration * 60 * 1000).roundToInt().toLong()
+                        onSeek(newPosition)
+                        exoPlayer?.seekTo(newPosition)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = formatTime(currentPosition, episode.duration * 60 * 1000L),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        FancyIconButton(
+                            onClick = { /* Previous episode */ },
+                            icon = painterResource(R.drawable.prev),
+                            contentDescription = "Previous Episode"
+                        )
+                        FancyIconButton(
+                            onClick = onPlayPause,
+                            icon = if (isPlaying) painterResource(R.drawable.pause_button_icon) else painterResource(
+                                R.drawable.play_button_icon
+                            ),
+                            contentDescription = if (isPlaying) "Pause" else "Play"
+                        )
+                        FancyIconButton(
+                            onClick = { /* Next episode */ },
+                            icon = painterResource(R.drawable.next),
+                            contentDescription = "Next Episode"
                         )
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+internal fun FancyPlayerContent(
+    episode: Episode,
+    exoPlayer: ExoPlayer?,
+    isPlaying: Boolean,
+    currentPosition: Long,
+    progress: Float,
+    showControls: Boolean,
+    controlsAlpha: Float,
+    doubleTapScale: Float,
+    doubleTapSide: DoubleTapSide?,
+    volume: Float,
+    onPlayPause: () -> Unit,
+    onSeek: (Long) -> Unit,
+    onFullScreenToggle: () -> Unit,
+    onShowControls: (Boolean) -> Unit,
+    onDoubleTapSide: (DoubleTapSide?) -> Unit,
+    onVolumeChange: (Float) -> Unit,
+    isFullScreen: Boolean
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = {
+                            onShowControls(!showControls)
+                        },
+                        onDoubleTap = { offset ->
+                            val side =
+                                if (offset.x < size.width / 2) DoubleTapSide.LEFT else DoubleTapSide.RIGHT
+                            onDoubleTapSide(side)
+                            val seekAmount = if (side == DoubleTapSide.RIGHT) 10000L else -10000L
+                            val newPosition = (currentPosition + seekAmount).coerceAtLeast(0L)
+                            onSeek(newPosition)
+                            exoPlayer?.seekTo(newPosition)
+                        }
+                    )
+                }
+        ) {
+            if (episode.videoUrl.isNotEmpty() && exoPlayer != null) {
+                AndroidView(
+                    factory = {
+                        PlayerView(it).apply {
+                            player = exoPlayer
+                            useController = false
+                            setOnTouchListener { _, _ -> true }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    update = { if (isPlaying) exoPlayer?.play() else exoPlayer?.pause() }
+                )
+            } else {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(episode.imageUrl.ifEmpty { "https://via.placeholder.com/400x225" })
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Episode ${episode.episodeNumber}",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = if (isPlaying) 0.3f else 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (!isPlaying) {
+                        Icon(
+                            painter = painterResource(R.drawable.play_button_icon),
+                            contentDescription = "Play",
+                            modifier = Modifier.size(64.dp),
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.3f)
+                            )
+                        )
+                    )
+            )
+
+            if (doubleTapSide != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = if (doubleTapSide == DoubleTapSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd
+                ) {
+                    Icon(
+                        painter = if (doubleTapSide == DoubleTapSide.LEFT) painterResource(R.drawable.rewind_icon) else painterResource(
+                            R.drawable.forward_icon
+                        ),
+                        contentDescription = "Seek",
+                        modifier = Modifier
+                            .size(60.dp)
+                            .scale(doubleTapScale)
+                            .alpha(doubleTapScale),
+                        tint = Color.White
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(controlsAlpha)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "Episode ${episode.episodeNumber}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    if (episode.title.isNotEmpty()) {
+                        Text(
+                            text = episode.title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.9f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                FancyIconButton(
+                    onClick = onFullScreenToggle,
+                    icon = if (isFullScreen) painterResource(R.drawable.exit_full_screen_icon) else painterResource(
+                        R.drawable.expand
+                    ),
+                    contentDescription = "Full Screen",
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                )
+
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    FancyPlayButton(
+                        isPlaying = isPlaying,
+                        onClick = onPlayPause,
+                        modifier = Modifier.size(60.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FancyIconButton(
+    onClick: () -> Unit,
+    icon: Any,
+    contentDescription: String?,
+    modifier: Modifier = Modifier
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier
+            .size(40.dp)
+            .background(
+                Color.Black.copy(alpha = 0.6f),
+                CircleShape
+            )
+    ) {
+        when (icon) {
+            is ImageVector -> {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            is Painter -> {
+                Icon(
+                    painter = icon,
+                    contentDescription = contentDescription,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            else -> throw IllegalArgumentException("Unsupported icon type")
+        }
+    }
+}
+
+@Composable
+private fun FancyPlayButton(
+    isPlaying: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (isPlaying) 0.8f else 1f,
+        animationSpec = tween(200),
+        label = "playScale"
+    )
+
+    FloatingActionButton(
+        onClick = onClick,
+        modifier = modifier.scale(scale),
+        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+        shape = CircleShape
+    ) {
+        Icon(
+            painter = if (isPlaying) painterResource(R.drawable.pause_button_icon) else painterResource(
+                R.drawable.play_button_icon
+            ),
+            contentDescription = if (isPlaying) "Pause" else "Play",
+            tint = Color.White,
+            modifier = Modifier.size(32.dp)
+        )
+    }
+}
+
+@Composable
+private fun FancyProgressBar(
+    progress: Float,
+    onSeek: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var isDragging by remember { mutableStateOf(false) }
+    var dragProgress by remember { mutableFloatStateOf(progress) }
+
+    LaunchedEffect(progress) {
+        if (!isDragging) {
+            dragProgress = progress
+        }
+    }
+
+    Column(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .background(
+                    Color.White.copy(alpha = 0.3f),
+                    RoundedCornerShape(2.dp)
+                )
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDragStart = {
+                            isDragging = true
+                        },
+                        onDragEnd = {
+                            isDragging = false
+                            onSeek(dragProgress)
+                        },
+                        onDrag = { _, dragAmount ->
+                            val newProgress =
+                                (dragProgress + dragAmount.x / size.width).coerceIn(0f, 1f)
+                            dragProgress = newProgress
+                        }
+                    )
+                }
+                .clickable {
+                    onSeek(progress)
+                }
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(if (isDragging) dragProgress else progress)
+                    .background(
+                        MaterialTheme.colorScheme.primary,
+                        RoundedCornerShape(2.dp)
+                    )
+            )
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(
+                        x = ((if (isDragging) dragProgress else progress) * 100).coerceIn(
+                            0f,
+                            100f
+                        ).dp
+                    )
+                    .size(16.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primary,
+                        CircleShape
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+private fun FancyVolumeControl(
+    volume: Float,
+    onVolumeChange: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.Black.copy(alpha = 0.8f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                painter = when {
+                    volume == 0f -> painterResource(R.drawable.volume_off_icon)
+                    volume < 0.5f -> painterResource(R.drawable.sound)
+                    else -> painterResource(R.drawable.sound)
+                },
+                contentDescription = "Volume",
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(100.dp)
+                    .background(
+                        Color.White.copy(alpha = 0.3f),
+                        RoundedCornerShape(2.dp)
+                    )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(volume)
+                        .background(
+                            MaterialTheme.colorScheme.primary,
+                            RoundedCornerShape(2.dp)
+                        )
+                        .align(Alignment.BottomCenter)
+                )
+            }
+        }
+    }
+}
+
+@SuppressLint("DefaultLocale")
+private fun formatTime(currentPosition: Long, totalDuration: Long): String {
+    val currentMinutes = (currentPosition / 60000).toInt()
+    val currentSeconds = ((currentPosition % 60000) / 1000).toInt()
+
+    val totalMinutes = (totalDuration / 60000).toInt()
+    val totalSeconds = ((totalDuration % 60000) / 1000).toInt()
+
+    return String.format(
+        "%02d:%02d / %02d:%02d",
+        currentMinutes,
+        currentSeconds,
+        totalMinutes,
+        totalSeconds
+    )
+}
+
+enum class DoubleTapSide {
+    LEFT, RIGHT
 } 
