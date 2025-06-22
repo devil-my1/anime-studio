@@ -220,19 +220,25 @@ class AnimeDetailViewModel @Inject constructor(
                     val userData = userManager.currentUser.value ?: dbRepository.getUserById(currentUser.uid)
                     
                     if (userData != null) {
-                        // Check if anime is already in watching list
+                        // Determine if the anime is already being watched
                         val isAlreadyWatching = userData.watchingAnime.any { it.id == anime.id }
-                        
+                        val isInWatchlist = userData.watchlist.any { it.id == anime.id }
+
+                        var updatedUser = userData
+
                         if (!isAlreadyWatching) {
-                            // Add anime to watching list
                             val updatedWatchingList = userData.watchingAnime + anime
-                            val updatedUser = userData.copy(watchingAnime = updatedWatchingList)
-                            
-                            // Update in database
+                            updatedUser = updatedUser.copy(watchingAnime = updatedWatchingList)
+                        }
+
+                        if (isInWatchlist) {
+                            val updatedWatchlist = userData.watchlist.filter { it.id != anime.id }
+                            updatedUser = updatedUser.copy(watchlist = updatedWatchlist)
+                        }
+
+                        if (updatedUser != userData) {
                             val success = dbRepository.updateUser(updatedUser)
-                            
                             if (success) {
-                                // Update UserManager for real-time updates
                                 userManager.updateCurrentUser(updatedUser)
                             }
                         }
@@ -329,44 +335,36 @@ class AnimeDetailViewModel @Inject constructor(
                     val userData = userManager.currentUser.value ?: dbRepository.getUserById(currentUser.uid)
                     
                     if (userData != null) {
-                        val totalEpisodes = anime.episodes.size
-                        val watchedEpisodes = anime.episodes.count { it.isWatched } + 1 // +1 for current episode
-                        
-                        // Check if this is the last episode
-                        val isCompleted = watchedEpisodes >= totalEpisodes
-                        
+                        // Determine completion after marking this episode
+                        val updatedEpisodes = anime.episodes.map {
+                            if (it.id == episode.id) it.copy(isWatched = true) else it
+                        }
+
+                        val watchedCount = updatedEpisodes.count { it.isWatched }
+                        val isCompleted = watchedCount >= anime.episodesCount
+
                         var updatedUser = userData
-                        
+
                         if (isCompleted) {
-                            // Move anime from watching to completed list
+                            // Move anime from watching list to completed list
                             val updatedWatchingList = userData.watchingAnime.filter { it.id != anime.id }
                             val updatedCompletedList = userData.completedAnime + anime
-                            
                             updatedUser = userData.copy(
                                 watchingAnime = updatedWatchingList,
                                 completedAnime = updatedCompletedList
                             )
                         }
-                        
-                        // Update in database
+
                         val success = dbRepository.updateUser(updatedUser)
-                        
                         if (success) {
-                            // Update UserManager for real-time updates
                             userManager.updateCurrentUser(updatedUser)
                         }
+
+                        // Update the local anime episodes with the watched flag
+                        _uiState.update { state ->
+                            state.copy(anime = state.anime?.copy(episodes = updatedEpisodes))
+                        }
                     }
-                }
-                
-                // Update the local anime state to reflect watched episode
-                _uiState.update { state ->
-                    val updatedEpisodes = state.anime?.episodes?.map { 
-                        if (it.id == episode.id) episode.copy(isWatched = true) else it 
-                    } ?: emptyList()
-                    
-                    state.copy(
-                        anime = state.anime?.copy(episodes = updatedEpisodes)
-                    )
                 }
             } catch (e: Exception) {
                 Log.e("AnimeDetailViewModel", "Error marking episode as watched: ${e.message}")
