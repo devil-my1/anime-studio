@@ -341,7 +341,7 @@ class AnimeDetailViewModel @Inject constructor(
                         }
 
                         val watchedCount = updatedEpisodes.count { it.isWatched }
-                        val isCompleted = watchedCount >= anime.episodesCount
+                        val isCompleted = watchedCount >= anime.episodes.size
 
                         var updatedUser = userData
 
@@ -357,13 +357,18 @@ class AnimeDetailViewModel @Inject constructor(
 
                         val success = dbRepository.updateUser(updatedUser)
                         if (success) {
+                            // Update UserManager for real-time updates
                             userManager.updateCurrentUser(updatedUser)
+                            
+                            // Only update UI state after successful database update
+                            _uiState.update { state ->
+                                state.copy(anime = state.anime?.copy(episodes = updatedEpisodes))
+                            }
+                        } else {
+                            Log.w("AnimeDetailViewModel", "Failed to update user data when marking episode as watched")
                         }
-
-                        // Update the local anime episodes with the watched flag
-                        _uiState.update { state ->
-                            state.copy(anime = state.anime?.copy(episodes = updatedEpisodes))
-                        }
+                    } else {
+                        Log.w("AnimeDetailViewModel", "User data not found when marking episode as watched")
                     }
                 }
             } catch (e: Exception) {

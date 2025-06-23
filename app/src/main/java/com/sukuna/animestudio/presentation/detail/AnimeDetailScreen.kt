@@ -45,8 +45,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.*
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
@@ -71,7 +73,6 @@ import com.sukuna.animestudio.domain.model.Anime
 import com.sukuna.animestudio.domain.model.User
 import com.sukuna.animestudio.presentation.components.LoadingIndicator
 import kotlinx.coroutines.delay
-import androidx.core.net.toUri
 
 /**
  * Main Anime Detail Screen that displays comprehensive anime information,
@@ -117,7 +118,10 @@ fun AnimeDetailScreen(
     }
 
     val progress = if ((uiState.selectedEpisode?.duration ?: 0) > 0) {
-        (uiState.currentPosition / (uiState.selectedEpisode!!.duration * 60 * 1000f)).coerceIn(0f, 1f)
+        (uiState.currentPosition / (uiState.selectedEpisode!!.duration * 60 * 1000f)).coerceIn(
+            0f,
+            1f
+        )
     } else 0f
 
     val controlsAlpha by animateFloatAsState(
@@ -145,23 +149,27 @@ fun AnimeDetailScreen(
     }
 
     if (uiState.isFullScreen && uiState.selectedEpisode != null) {
-        FullScreenPlayerContent(
+//        FullScreenPlayerContent(
+//            episode = uiState.selectedEpisode!!,
+//            exoPlayer = exoPlayer,
+//            isPlaying = uiState.isPlaying,
+//            currentPosition = uiState.currentPosition,
+//            progress = progress,
+//            showControls = showControls,
+//            controlsAlpha = controlsAlpha,
+//            doubleTapScale = doubleTapScale,
+//            doubleTapSide = doubleTapSide,
+//            volume = volume,
+//            onPlayPause = { viewModel.togglePlayPause() },
+//            onSeek = { viewModel.seekTo(it) },
+//            onFullScreenToggle = { viewModel.toggleFullScreen() },
+//            onShowControls = { showControls = it },
+//            onDoubleTapSide = { doubleTapSide = it },
+//            onVolumeChange = { volume = it }
+//        )
+        FullScreenPlayer(
             episode = uiState.selectedEpisode!!,
-            exoPlayer = exoPlayer,
-            isPlaying = uiState.isPlaying,
-            currentPosition = uiState.currentPosition,
-            progress = progress,
-            showControls = showControls,
-            controlsAlpha = controlsAlpha,
-            doubleTapScale = doubleTapScale,
-            doubleTapSide = doubleTapSide,
-            volume = volume,
-            onPlayPause = { viewModel.togglePlayPause() },
-            onSeek = { viewModel.seekTo(it) },
-            onFullScreenToggle = { viewModel.toggleFullScreen() },
-            onShowControls = { showControls = it },
-            onDoubleTapSide = { doubleTapSide = it },
-            onVolumeChange = { volume = it }
+            onToggleFullScreen = { viewModel.toggleFullScreen() }
         )
     } else {
         Scaffold(
@@ -281,25 +289,30 @@ fun AnimeDetailScreen(
                                     shape = RoundedCornerShape(16.dp),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                                 ) {
-                                    FancyPlayerContent(
+//                                    FancyPlayerContent(
+//                                        episode = uiState.selectedEpisode!!,
+//                                        exoPlayer = exoPlayer,
+//                                        isPlaying = uiState.isPlaying,
+//                                        currentPosition = uiState.currentPosition,
+//                                        progress = progress,
+//                                        showControls = showControls,
+//                                        controlsAlpha = controlsAlpha,
+//                                        doubleTapScale = doubleTapScale,
+//                                        doubleTapSide = doubleTapSide,
+//                                        volume = volume,
+//                                        onPlayPause = { viewModel.togglePlayPause() },
+//                                        onSeek = { viewModel.seekTo(it) },
+//                                        onFullScreenToggle = { viewModel.toggleFullScreen() },
+//                                        onShowControls = { showControls = it },
+//                                        onDoubleTapSide = { doubleTapSide = it },
+//                                        onVolumeChange = { volume = it },
+//                                        isFullScreen = false
+//                                    )
+                                    Media3PlayerSection(
                                         episode = uiState.selectedEpisode!!,
-                                        exoPlayer = exoPlayer,
-                                        isPlaying = uiState.isPlaying,
-                                        currentPosition = uiState.currentPosition,
-                                        progress = progress,
-                                        showControls = showControls,
-                                        controlsAlpha = controlsAlpha,
-                                        doubleTapScale = doubleTapScale,
-                                        doubleTapSide = doubleTapSide,
-                                        volume = volume,
-                                        onPlayPause = { viewModel.togglePlayPause() },
-                                        onSeek = { viewModel.seekTo(it) },
-                                        onFullScreenToggle = { viewModel.toggleFullScreen() },
-                                        onShowControls = { showControls = it },
-                                        onDoubleTapSide = { doubleTapSide = it },
-                                        onVolumeChange = { volume = it },
-                                        isFullScreen = false
-                                    )
+                                        modifier = Modifier
+                                            .fillMaxSize(),
+                                        onToggleFullScreen = { viewModel.toggleFullScreen() })
                                 }
                                 Spacer(modifier = Modifier.height(24.dp))
                             }
